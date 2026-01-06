@@ -1,7 +1,12 @@
 package uk.co.rosshome.pumpkin
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +32,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.util.Locale
 
 private enum class Screen(val label: String) {
     HOME("Home"),
@@ -123,6 +130,86 @@ private fun HomeScreen(settings: SettingsState, padding: PaddingValues) {
 private fun PushToTalkScreen(ingestViewModel: IngestViewModel, padding: PaddingValues) {
     var text by remember { mutableStateOf("") }
     val logs = ingestViewModel.logs
+    val context = LocalContext.current
+    val hasAudioPermission = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.RECORD_AUDIO,
+    ) == PackageManager.PERMISSION_GRANTED
+    var isListening by remember { mutableStateOf(false) }
+    var speechStatus by remember { mutableStateOf("") }
+    val recognizer = remember {
+        if (SpeechRecognizer.isRecognitionAvailable(context)) {
+            SpeechRecognizer.createSpeechRecognizer(context)
+        } else {
+            null
+        }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (!granted) {
+            speechStatus = "Microphone permission denied"
+        }
+    }
+    val listener = remember {
+        object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                speechStatus = "Listening..."
+            }
+
+            override fun onBeginningOfSpeech() {
+                speechStatus = "Listening..."
+            }
+
+            override fun onRmsChanged(rmsdB: Float) {
+                return
+            }
+
+            override fun onBufferReceived(buffer: ByteArray?) {
+                return
+            }
+
+            override fun onEndOfSpeech() {
+                speechStatus = "Processing..."
+            }
+
+            override fun onError(error: Int) {
+                isListening = false
+                speechStatus = "Speech error: $error"
+            }
+
+            override fun onResults(results: Bundle?) {
+                isListening = false
+                val match = results
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                if (!match.isNullOrBlank()) {
+                    text = match
+                    speechStatus = "Ready"
+                } else {
+                    speechStatus = "No speech detected"
+                }
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {
+                val partial = partialResults
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                if (!partial.isNullOrBlank()) {
+                    text = partial
+                }
+            }
+
+            override fun onEvent(eventType: Int, params: Bundle?) {
+                return
+            }
+        }
+    }
+    DisposableEffect(recognizer) {
+        onDispose {
+            recognizer?.destroy()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -147,6 +234,42 @@ private fun PushToTalkScreen(ingestViewModel: IngestViewModel, padding: PaddingV
             enabled = text.isNotBlank() && !ingestViewModel.isSending,
         ) {
             Text(text = if (ingestViewModel.isSending) "Sending..." else "Send")
+        }
+        Button(
+            onClick = {
+                if (!hasAudioPermission) {
+                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    return@Button
+                }
+                if (recognizer == null) {
+                    speechStatus = "Speech recognizer unavailable"
+                    return@Button
+                }
+                if (isListening) {
+                    recognizer.stopListening()
+                    isListening = false
+                    speechStatus = "Stopped"
+                } else {
+                    recognizer.setRecognitionListener(listener)
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(
+                            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+                        )
+                        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                    }
+                    recognizer.startListening(intent)
+                    isListening = true
+                    speechStatus = "Starting..."
+                }
+            },
+            enabled = !ingestViewModel.isSending,
+        ) {
+            Text(text = if (isListening) "Stop listening" else "Start listening")
+        }
+        if (speechStatus.isNotBlank()) {
+            Text(text = speechStatus, style = MaterialTheme.typography.bodySmall)
         }
         ResponseSummary(ingestViewModel = ingestViewModel)
         Text(text = "Recent responses", style = MaterialTheme.typography.titleSmall)
