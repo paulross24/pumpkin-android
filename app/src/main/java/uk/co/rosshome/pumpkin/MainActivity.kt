@@ -20,6 +20,7 @@ class MainActivity : ComponentActivity() {
                     settingsRepository,
                     IngestClient(),
                     LocationProvider(applicationContext),
+                    SummaryClient(),
                 ),
             )
             val proposalsViewModel: ProposalsViewModel = viewModel(

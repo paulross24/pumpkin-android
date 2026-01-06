@@ -23,6 +23,7 @@ class IngestViewModel(
     private val settingsRepository: SettingsRepository,
     private val ingestClient: IngestClient,
     private val locationProvider: LocationProvider,
+    private val summaryClient: SummaryClient,
 ) : AndroidViewModel(application) {
     val logs = mutableStateListOf<IngestLogEntry>()
     var lastResponse by mutableStateOf<String?>(null)
@@ -65,6 +66,24 @@ class IngestViewModel(
             isSending = true
             lastError = null
             val settings = settingsRepository.readSettings()
+            if (isStatusQuestion(text)) {
+            val summaryResult = summaryClient.fetchSummary(settings)
+            summaryResult.fold(
+                onSuccess = { summary ->
+                    lastResponse = null
+                    lastHumanResponse = summarizeStatus(summary)
+                },
+                    onFailure = { exc ->
+                        lastError = exc.message ?: "summary failed"
+                        lastHumanResponse = "Sorry, I couldn't fetch a system summary."
+                },
+            )
+            if (settings.speakResponses) {
+                speak(lastHumanResponse)
+            }
+            isSending = false
+            return@launch
+            }
             val locationPayload = if (settings.includeLocation && hasLocationPermission()) {
                 val location = locationProvider.lastKnownLocation()
                 if (location != null) {
@@ -152,6 +171,50 @@ class IngestViewModel(
         }
         return "Pumpkin replied: $trimmed"
     }
+
+    private fun isStatusQuestion(text: String): Boolean {
+        val lowered = text.trim().lowercase()
+        val keywords = listOf(
+            "status",
+            "health",
+            "issues",
+            "problem",
+            "problems",
+            "how is the system",
+            "how's the system",
+            "system ok",
+            "system okay",
+        )
+        return lowered.contains("?") || keywords.any { lowered.contains(it) }
+    }
+
+    private fun summarizeStatus(summary: SummaryResponse): String {
+        val issues = summary.issues
+        val proposalCount = summary.proposal_count
+        val snapshot = summary.system_snapshot
+        val load = snapshot?.loadavg
+        val disk = snapshot?.disk
+        val mem = snapshot?.meminfo_kb
+        val parts = mutableListOf<String>()
+        if (issues.isEmpty()) {
+            parts.add("All clear so far.")
+        } else {
+            parts.add("I found ${issues.size} issue(s): ${issues.joinToString { it.message }}")
+        }
+        if (disk?.used_percent != null) {
+            parts.add("Disk usage is ${(disk.used_percent * 100).toInt()}%.")
+        }
+        if (mem?.MemAvailable != null && mem.MemTotal != null) {
+            val availMb = mem.MemAvailable / 1024
+            val totalMb = mem.MemTotal / 1024
+            parts.add("Memory available ${availMb}MB of ${totalMb}MB.")
+        }
+        if (load?.one != null) {
+            parts.add("Load avg is ${"%.2f".format(load.one)}.")
+        }
+        parts.add("There are ${proposalCount} pending proposal(s).")
+        return parts.joinToString(" ")
+    }
 }
 
 class IngestViewModelFactory(
@@ -159,6 +222,7 @@ class IngestViewModelFactory(
     private val settingsRepository: SettingsRepository,
     private val ingestClient: IngestClient,
     private val locationProvider: LocationProvider,
+    private val summaryClient: SummaryClient,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(IngestViewModel::class.java)) {
@@ -168,6 +232,7 @@ class IngestViewModelFactory(
                 settingsRepository,
                 ingestClient,
                 locationProvider,
+                summaryClient,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

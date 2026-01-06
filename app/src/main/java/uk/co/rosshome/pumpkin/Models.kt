@@ -47,6 +47,72 @@ data class ProposalsResponse(
     val proposals: List<Proposal>,
 )
 
+@Serializable
+data class SummaryResponse(
+    val status: String,
+    val heartbeat: SummaryEvent? = null,
+    val system_snapshot: SystemSnapshot? = null,
+    val issues: List<SummaryIssue> = emptyList(),
+    val proposals: List<SummaryProposal> = emptyList(),
+    val proposal_count: Int = 0,
+)
+
+@Serializable
+data class SummaryEvent(
+    val id: Int,
+    val ts: String,
+    val source: String,
+    val type: String,
+    val payload: JsonElement? = null,
+    val severity: String,
+)
+
+@Serializable
+data class SummaryIssue(
+    val kind: String,
+    val message: String,
+)
+
+@Serializable
+data class SummaryProposal(
+    val id: Int,
+    val kind: String,
+    val summary: String,
+    val risk: Double,
+    val status: String,
+    val expected_outcome: String,
+    val ts_created: String,
+)
+
+@Serializable
+data class SystemSnapshot(
+    val loadavg: LoadAvg? = null,
+    val disk: DiskUsage? = null,
+    val meminfo_kb: MemInfo? = null,
+)
+
+@Serializable
+data class LoadAvg(
+    @SerialName("1m") val one: Double? = null,
+    @SerialName("5m") val five: Double? = null,
+    @SerialName("15m") val fifteen: Double? = null,
+)
+
+@Serializable
+data class DiskUsage(
+    val path: String? = null,
+    val total_bytes: Long? = null,
+    val used_bytes: Long? = null,
+    val free_bytes: Long? = null,
+    val used_percent: Double? = null,
+)
+
+@Serializable
+data class MemInfo(
+    val MemTotal: Long? = null,
+    val MemAvailable: Long? = null,
+)
+
 data class IngestLogEntry(
     val timestamp: String,
     val success: Boolean,
