@@ -31,6 +31,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -93,6 +97,7 @@ fun PumpkinApp(
                 Screen.SETTINGS -> SettingsScreen(
                     settings = settings,
                     settingsViewModel = settingsViewModel,
+                    ingestViewModel = ingestViewModel,
                     padding = padding,
                 )
                 Screen.DEBUG -> DebugScreen(
@@ -360,9 +365,11 @@ private fun ProposalCard(proposal: Proposal) {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun SettingsScreen(
     settings: SettingsState,
     settingsViewModel: SettingsViewModel,
+    ingestViewModel: IngestViewModel,
     padding: PaddingValues,
 ) {
     val context = LocalContext.current
@@ -373,6 +380,8 @@ private fun SettingsScreen(
 
     var serverUrl by remember(settings.serverUrl) { mutableStateOf(settings.serverUrl) }
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
+    var voiceMenuOpen by remember { mutableStateOf(false) }
+    val voiceOptions = ingestViewModel.availableVoices
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -444,6 +453,44 @@ private fun SettingsScreen(
                 },
             )
         }
+        if (settings.speakResponses) {
+            ExposedDropdownMenuBox(
+                expanded = voiceMenuOpen,
+                onExpandedChange = { voiceMenuOpen = !voiceMenuOpen },
+            ) {
+                OutlinedTextField(
+                    value = if (settings.ttsVoiceName.isBlank()) "System default" else settings.ttsVoiceName,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Voice") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = voiceMenuOpen) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                )
+                ExposedDropdownMenu(
+                    expanded = voiceMenuOpen,
+                    onDismissRequest = { voiceMenuOpen = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("System default") },
+                        onClick = {
+                            settingsViewModel.updateTtsVoiceName("")
+                            voiceMenuOpen = false
+                        },
+                    )
+                    voiceOptions.forEach { voice ->
+                        DropdownMenuItem(
+                            text = { Text(voice) },
+                            onClick = {
+                                settingsViewModel.updateTtsVoiceName(voice)
+                                voiceMenuOpen = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
         if (!hasLocationPermission) {
             TextButton(
                 onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
@@ -462,7 +509,7 @@ private fun ResponseSummary(ingestViewModel: IngestViewModel) {
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = "Last response", style = MaterialTheme.typography.titleSmall)
-            Text(text = ingestViewModel.lastResponse ?: "none")
+            Text(text = ingestViewModel.lastHumanResponse ?: "none")
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Last error", style = MaterialTheme.typography.titleSmall)
             Text(text = ingestViewModel.lastError ?: "none")

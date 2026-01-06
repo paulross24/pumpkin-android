@@ -45,6 +45,11 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateTtsVoiceName(value: String) {
+        prefs.edit().putString(KEY_TTS_VOICE, value).apply()
+        _settings.value = loadState()
+    }
+
     private fun loadState(): SettingsState {
         return SettingsState(
             serverUrl = normalizeServerUrl(
@@ -53,6 +58,7 @@ class SettingsRepository(context: Context) {
             apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
             includeLocation = prefs.getBoolean(KEY_INCLUDE_LOCATION, false),
             speakResponses = prefs.getBoolean(KEY_SPEAK_RESPONSES, false),
+            ttsVoiceName = prefs.getString(KEY_TTS_VOICE, "") ?: "",
         )
     }
 
@@ -65,11 +71,13 @@ class SettingsRepository(context: Context) {
         private const val KEY_API_KEY = "api_key"
         private const val KEY_INCLUDE_LOCATION = "include_location"
         private const val KEY_SPEAK_RESPONSES = "speak_responses"
+        private const val KEY_TTS_VOICE = "tts_voice"
         private val trackedKeys = setOf(
             KEY_SERVER_URL,
             KEY_API_KEY,
             KEY_INCLUDE_LOCATION,
             KEY_SPEAK_RESPONSES,
+            KEY_TTS_VOICE,
         )
 
         const val DEFAULT_SERVER_URL = "https://pumpkin.rosshome.co.uk"

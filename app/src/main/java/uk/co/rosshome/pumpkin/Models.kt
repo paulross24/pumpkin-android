@@ -59,4 +59,5 @@ data class SettingsState(
     val apiKey: String,
     val includeLocation: Boolean,
     val speakResponses: Boolean,
+    val ttsVoiceName: String,
 )

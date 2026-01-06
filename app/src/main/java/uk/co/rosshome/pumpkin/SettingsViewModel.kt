@@ -17,6 +17,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             apiKey = "",
             includeLocation = false,
             speakResponses = false,
+            ttsVoiceName = "",
         ),
     )
 
@@ -41,6 +42,12 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateSpeakResponses(enabled: Boolean) {
         viewModelScope.launch {
             repository.updateSpeakResponses(enabled)
+        }
+    }
+
+    fun updateTtsVoiceName(value: String) {
+        viewModelScope.launch {
+            repository.updateTtsVoiceName(value)
         }
     }
 }
