@@ -35,6 +35,11 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateOpenAiKey(value: String) {
+        prefs.edit().putString(KEY_OPENAI_KEY, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
     fun updateIncludeLocation(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_INCLUDE_LOCATION, enabled).apply()
         _settings.value = loadState()
@@ -56,6 +61,7 @@ class SettingsRepository(context: Context) {
                 prefs.getString(KEY_SERVER_URL, DEFAULT_SERVER_URL) ?: DEFAULT_SERVER_URL
             ),
             apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
+            openAiKey = prefs.getString(KEY_OPENAI_KEY, "") ?: "",
             includeLocation = prefs.getBoolean(KEY_INCLUDE_LOCATION, false),
             speakResponses = prefs.getBoolean(KEY_SPEAK_RESPONSES, false),
             ttsVoiceName = prefs.getString(KEY_TTS_VOICE, "") ?: "",
@@ -69,12 +75,14 @@ class SettingsRepository(context: Context) {
     companion object {
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_API_KEY = "api_key"
+        private const val KEY_OPENAI_KEY = "openai_key"
         private const val KEY_INCLUDE_LOCATION = "include_location"
         private const val KEY_SPEAK_RESPONSES = "speak_responses"
         private const val KEY_TTS_VOICE = "tts_voice"
         private val trackedKeys = setOf(
             KEY_SERVER_URL,
             KEY_API_KEY,
+            KEY_OPENAI_KEY,
             KEY_INCLUDE_LOCATION,
             KEY_SPEAK_RESPONSES,
             KEY_TTS_VOICE,

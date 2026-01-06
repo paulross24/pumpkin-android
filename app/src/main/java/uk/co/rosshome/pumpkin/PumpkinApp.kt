@@ -129,6 +129,8 @@ private fun HomeScreen(settings: SettingsState, padding: PaddingValues) {
                 Text(text = if (settings.includeLocation) "enabled" else "disabled")
                 Text(text = "Speak responses", style = MaterialTheme.typography.titleSmall)
                 Text(text = if (settings.speakResponses) "enabled" else "disabled")
+                Text(text = "OpenAI key", style = MaterialTheme.typography.titleSmall)
+                Text(text = if (settings.openAiKey.isBlank()) "not set" else "set")
             }
         }
         Text(
@@ -380,6 +382,7 @@ private fun SettingsScreen(
 
     var serverUrl by remember(settings.serverUrl) { mutableStateOf(settings.serverUrl) }
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
+    var openAiKey by remember(settings.openAiKey) { mutableStateOf(settings.openAiKey) }
     var voiceMenuOpen by remember { mutableStateOf(false) }
     val voiceOptions = ingestViewModel.availableVoices
 
@@ -417,6 +420,17 @@ private fun SettingsScreen(
         )
         Button(onClick = { settingsViewModel.updateApiKey(apiKey) }) {
             Text(text = "Save API key")
+        }
+        OutlinedTextField(
+            value = openAiKey,
+            onValueChange = { openAiKey = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("OpenAI API Key") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+        )
+        Button(onClick = { settingsViewModel.updateOpenAiKey(openAiKey) }) {
+            Text(text = "Save OpenAI key")
         }
         Row(
             modifier = Modifier.fillMaxWidth(),

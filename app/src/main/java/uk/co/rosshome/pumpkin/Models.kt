@@ -129,6 +129,7 @@ data class IngestLogEntry(
 data class SettingsState(
     val serverUrl: String,
     val apiKey: String,
+    val openAiKey: String,
     val includeLocation: Boolean,
     val speakResponses: Boolean,
     val ttsVoiceName: String,
