@@ -1,53 +1,53 @@
 package uk.co.rosshome.pumpkin
 
 import android.content.Context
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import android.content.SharedPreferences
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
-private val Context.dataStore by preferencesDataStore(name = "settings")
+class SettingsRepository(context: Context) {
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val _settings = MutableStateFlow(loadState())
+    val settingsFlow: StateFlow<SettingsState> = _settings
 
-class SettingsRepository(private val context: Context) {
-    private val serverUrlKey = stringPreferencesKey("server_url")
-    private val apiKeyKey = stringPreferencesKey("api_key")
-    private val includeLocationKey = booleanPreferencesKey("include_location")
+    private val listener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key in trackedKeys) {
+                _settings.value = loadState()
+            }
+        }
 
-    val settingsFlow: Flow<SettingsState> = context.dataStore.data.map { prefs ->
-        SettingsState(
-            serverUrl = normalizeServerUrl(
-                prefs[serverUrlKey] ?: DEFAULT_SERVER_URL
-            ),
-            apiKey = prefs[apiKeyKey] ?: "",
-            includeLocation = prefs[includeLocationKey] ?: false,
-        )
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(listener)
     }
 
-    suspend fun readSettings(): SettingsState {
-        return settingsFlow.first()
-    }
+    fun readSettings(): SettingsState = _settings.value
 
-    suspend fun updateServerUrl(value: String) {
+    fun updateServerUrl(value: String) {
         val normalized = normalizeServerUrl(value)
-        context.dataStore.edit { prefs ->
-            prefs[serverUrlKey] = normalized
-        }
+        prefs.edit().putString(KEY_SERVER_URL, normalized).apply()
+        _settings.value = loadState()
     }
 
-    suspend fun updateApiKey(value: String) {
-        context.dataStore.edit { prefs ->
-            prefs[apiKeyKey] = value.trim()
-        }
+    fun updateApiKey(value: String) {
+        prefs.edit().putString(KEY_API_KEY, value.trim()).apply()
+        _settings.value = loadState()
     }
 
-    suspend fun updateIncludeLocation(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[includeLocationKey] = enabled
-        }
+    fun updateIncludeLocation(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_INCLUDE_LOCATION, enabled).apply()
+        _settings.value = loadState()
+    }
+
+    private fun loadState(): SettingsState {
+        return SettingsState(
+            serverUrl = normalizeServerUrl(
+                prefs.getString(KEY_SERVER_URL, DEFAULT_SERVER_URL) ?: DEFAULT_SERVER_URL
+            ),
+            apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
+            includeLocation = prefs.getBoolean(KEY_INCLUDE_LOCATION, false),
+        )
     }
 
     private fun normalizeServerUrl(value: String): String {
@@ -55,6 +55,11 @@ class SettingsRepository(private val context: Context) {
     }
 
     companion object {
+        private const val KEY_SERVER_URL = "server_url"
+        private const val KEY_API_KEY = "api_key"
+        private const val KEY_INCLUDE_LOCATION = "include_location"
+        private val trackedKeys = setOf(KEY_SERVER_URL, KEY_API_KEY, KEY_INCLUDE_LOCATION)
+
         const val DEFAULT_SERVER_URL = "https://pumpkin.rosshome.co.uk"
     }
 }
