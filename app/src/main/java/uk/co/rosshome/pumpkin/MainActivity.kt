@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
                     IngestClient(),
                     LocationProvider(applicationContext),
                     SummaryClient(),
+                    AskClient(),
                 ),
             )
             val proposalsViewModel: ProposalsViewModel = viewModel(

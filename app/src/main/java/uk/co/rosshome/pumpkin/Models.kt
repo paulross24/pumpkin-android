@@ -58,6 +58,12 @@ data class SummaryResponse(
 )
 
 @Serializable
+data class AskResponse(
+    val status: String,
+    val reply: String,
+)
+
+@Serializable
 data class SummaryEvent(
     val id: Int,
     val ts: String,

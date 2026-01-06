@@ -24,6 +24,7 @@ class IngestViewModel(
     private val ingestClient: IngestClient,
     private val locationProvider: LocationProvider,
     private val summaryClient: SummaryClient,
+    private val askClient: AskClient,
 ) : AndroidViewModel(application) {
     val logs = mutableStateListOf<IngestLogEntry>()
     var lastResponse by mutableStateOf<String?>(null)
@@ -66,24 +67,6 @@ class IngestViewModel(
             isSending = true
             lastError = null
             val settings = settingsRepository.readSettings()
-            if (isStatusQuestion(text)) {
-            val summaryResult = summaryClient.fetchSummary(settings)
-            summaryResult.fold(
-                onSuccess = { summary ->
-                    lastResponse = null
-                    lastHumanResponse = summarizeStatus(summary)
-                },
-                    onFailure = { exc ->
-                        lastError = exc.message ?: "summary failed"
-                        lastHumanResponse = "Sorry, I couldn't fetch a system summary."
-                },
-            )
-            if (settings.speakResponses) {
-                speak(lastHumanResponse)
-            }
-            isSending = false
-            return@launch
-            }
             val locationPayload = if (settings.includeLocation && hasLocationPermission()) {
                 val location = locationProvider.lastKnownLocation()
                 if (location != null) {
@@ -97,6 +80,41 @@ class IngestViewModel(
                 }
             } else {
                 null
+            }
+            if (isStatusQuestion(text)) {
+                val summaryResult = summaryClient.fetchSummary(settings)
+                summaryResult.fold(
+                    onSuccess = { summary ->
+                        lastResponse = null
+                        lastHumanResponse = summarizeStatus(summary)
+                },
+                    onFailure = { exc ->
+                        lastError = exc.message ?: "summary failed"
+                        lastHumanResponse = "Sorry, I couldn't fetch a system summary."
+                },
+            )
+                if (settings.speakResponses) {
+                    speak(lastHumanResponse)
+                }
+                isSending = false
+                return@launch
+            }
+            val askResult = askClient.ask(text, settings, deviceId, locationPayload)
+            askResult.fold(
+                onSuccess = { answer ->
+                    lastResponse = answer.reply
+                    lastHumanResponse = answer.reply
+                },
+                onFailure = { exc ->
+                    lastError = exc.message ?: "ask failed"
+                },
+            )
+            if (askResult.isSuccess) {
+                if (settings.speakResponses) {
+                    speak(lastHumanResponse)
+                }
+                isSending = false
+                return@launch
             }
             val entry = ingestClient.sendIngest(text, settings, deviceId, locationPayload)
             logs.add(0, entry)
@@ -223,6 +241,7 @@ class IngestViewModelFactory(
     private val ingestClient: IngestClient,
     private val locationProvider: LocationProvider,
     private val summaryClient: SummaryClient,
+    private val askClient: AskClient,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(IngestViewModel::class.java)) {
@@ -233,6 +252,7 @@ class IngestViewModelFactory(
                 ingestClient,
                 locationProvider,
                 summaryClient,
+                askClient,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
