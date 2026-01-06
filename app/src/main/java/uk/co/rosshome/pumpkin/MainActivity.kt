@@ -22,10 +22,17 @@ class MainActivity : ComponentActivity() {
                     LocationProvider(applicationContext),
                 ),
             )
+            val proposalsViewModel: ProposalsViewModel = viewModel(
+                factory = ProposalsViewModelFactory(
+                    settingsRepository,
+                    ProposalClient(),
+                ),
+            )
 
             PumpkinApp(
                 settingsViewModel = settingsViewModel,
                 ingestViewModel = ingestViewModel,
+                proposalsViewModel = proposalsViewModel,
             )
         }
     }

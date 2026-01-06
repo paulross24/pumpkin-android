@@ -34,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,6 +51,7 @@ import java.util.Locale
 private enum class Screen(val label: String) {
     HOME("Home"),
     PTT("Push"),
+    PROPOSALS("Proposals"),
     SETTINGS("Settings"),
     DEBUG("Debug"),
 }
@@ -58,11 +60,12 @@ private enum class Screen(val label: String) {
 fun PumpkinApp(
     settingsViewModel: SettingsViewModel,
     ingestViewModel: IngestViewModel,
+    proposalsViewModel: ProposalsViewModel,
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     var screen by remember { mutableStateOf(Screen.HOME) }
 
-    MaterialTheme {
+    PumpkinTheme {
         Scaffold(
             bottomBar = {
                 NavigationBar {
@@ -81,6 +84,10 @@ fun PumpkinApp(
                 Screen.HOME -> HomeScreen(settings = settings, padding = padding)
                 Screen.PTT -> PushToTalkScreen(
                     ingestViewModel = ingestViewModel,
+                    padding = padding,
+                )
+                Screen.PROPOSALS -> ProposalsScreen(
+                    proposalsViewModel = proposalsViewModel,
                     padding = padding,
                 )
                 Screen.SETTINGS -> SettingsScreen(
@@ -279,6 +286,74 @@ private fun PushToTalkScreen(ingestViewModel: IngestViewModel, padding: PaddingV
         ) {
             items(logs) { entry ->
                 ResponseLogCard(entry)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProposalsScreen(proposalsViewModel: ProposalsViewModel, padding: PaddingValues) {
+    var filter by remember { mutableStateOf("pending") }
+    val state by proposalsViewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(filter) {
+        proposalsViewModel.refresh(filter, 50)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(text = "Proposals", style = MaterialTheme.typography.headlineSmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { filter = "pending" }) {
+                Text(text = "Pending")
+            }
+            Button(onClick = { filter = "" }) {
+                Text(text = "All")
+            }
+            Button(onClick = { proposalsViewModel.refresh(filter, 50) }) {
+                Text(text = "Refresh")
+            }
+        }
+        if (state.isLoading) {
+            Text(text = "Loading...", style = MaterialTheme.typography.bodySmall)
+        }
+        if (!state.error.isNullOrBlank()) {
+            Text(text = "Error: ${state.error}", style = MaterialTheme.typography.bodySmall)
+        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(state.proposals) { proposal ->
+                ProposalCard(proposal)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProposalCard(proposal: Proposal) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = proposal.summary, style = MaterialTheme.typography.titleSmall)
+            Text(text = "Status: ${proposal.status} | Risk: ${proposal.risk}")
+            Text(text = "Kind: ${proposal.kind}")
+            Text(text = "Expected: ${proposal.expected_outcome}", style = MaterialTheme.typography.bodySmall)
+            if (!proposal.ai_context_excerpt.isNullOrBlank()) {
+                Text(
+                    text = proposal.ai_context_excerpt,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }

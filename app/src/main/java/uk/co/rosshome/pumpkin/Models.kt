@@ -2,6 +2,7 @@ package uk.co.rosshome.pumpkin
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class LocationPayload(
@@ -23,6 +24,27 @@ data class IngestRequest(
 data class IngestResponse(
     val status: String? = null,
     val received: Map<String, String>? = null,
+)
+
+@Serializable
+data class Proposal(
+    val id: Int,
+    val kind: String,
+    val summary: String,
+    val details: JsonElement? = null,
+    val risk: Double,
+    val expected_outcome: String,
+    val status: String,
+    val needs_new_capability: Boolean,
+    val capability_request: String? = null,
+    val ai_context_excerpt: String? = null,
+    val ts_created: String,
+)
+
+@Serializable
+data class ProposalsResponse(
+    val count: Int,
+    val proposals: List<Proposal>,
 )
 
 data class IngestLogEntry(
