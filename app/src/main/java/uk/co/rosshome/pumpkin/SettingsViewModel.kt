@@ -16,6 +16,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             serverUrl = SettingsRepository.DEFAULT_SERVER_URL,
             apiKey = "",
             includeLocation = false,
+            speakResponses = false,
         ),
     )
 
@@ -34,6 +35,12 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateIncludeLocation(enabled: Boolean) {
         viewModelScope.launch {
             repository.updateIncludeLocation(enabled)
+        }
+    }
+
+    fun updateSpeakResponses(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateSpeakResponses(enabled)
         }
     }
 }

@@ -36,4 +36,5 @@ data class SettingsState(
     val serverUrl: String,
     val apiKey: String,
     val includeLocation: Boolean,
+    val speakResponses: Boolean,
 )

@@ -3,6 +3,7 @@ package uk.co.rosshome.pumpkin
 import android.app.Application
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -12,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 class IngestViewModel(
@@ -28,9 +30,21 @@ class IngestViewModel(
     var isSending by mutableStateOf(false)
         private set
 
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+
     private val deviceId: String =
         Settings.Secure.getString(application.contentResolver, Settings.Secure.ANDROID_ID)
             ?: "unknown"
+
+    init {
+        tts = TextToSpeech(application) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            if (ttsReady) {
+                tts?.language = Locale.UK
+            }
+        }
+    }
 
     fun sendText(text: String) {
         if (text.isBlank()) {
@@ -61,6 +75,14 @@ class IngestViewModel(
             } else {
                 lastError = entry.message
             }
+            if (settings.speakResponses) {
+                val spoken = when {
+                    entry.success && !entry.responseBody.isNullOrBlank() -> entry.responseBody
+                    entry.success -> "Sent."
+                    else -> "Error. ${entry.message}"
+                }
+                speak(spoken)
+            }
             isSending = false
         }
     }
@@ -71,6 +93,20 @@ class IngestViewModel(
             context,
             android.Manifest.permission.ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun speak(text: String?) {
+        if (!ttsReady || text.isNullOrBlank()) {
+            return
+        }
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "pumpkin_response")
+    }
+
+    override fun onCleared() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
+        super.onCleared()
     }
 }
 

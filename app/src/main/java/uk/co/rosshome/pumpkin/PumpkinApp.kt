@@ -108,6 +108,8 @@ private fun HomeScreen(settings: SettingsState, padding: PaddingValues) {
                 Text(text = maskKey(settings.apiKey))
                 Text(text = "Location", style = MaterialTheme.typography.titleSmall)
                 Text(text = if (settings.includeLocation) "enabled" else "disabled")
+                Text(text = "Speak responses", style = MaterialTheme.typography.titleSmall)
+                Text(text = if (settings.speakResponses) "enabled" else "disabled")
             }
         }
         Text(
@@ -146,6 +148,7 @@ private fun PushToTalkScreen(ingestViewModel: IngestViewModel, padding: PaddingV
         ) {
             Text(text = if (ingestViewModel.isSending) "Sending..." else "Send")
         }
+        ResponseSummary(ingestViewModel = ingestViewModel)
         Text(text = "Recent responses", style = MaterialTheme.typography.titleSmall)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -230,12 +233,41 @@ private fun SettingsScreen(
                 },
             )
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(text = "Speak responses")
+            Switch(
+                checked = settings.speakResponses,
+                onCheckedChange = { enabled ->
+                    settingsViewModel.updateSpeakResponses(enabled)
+                },
+            )
+        }
         if (!hasLocationPermission) {
             TextButton(
                 onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
             ) {
                 Text(text = "Request location permission")
             }
+        }
+    }
+}
+
+@Composable
+private fun ResponseSummary(ingestViewModel: IngestViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = "Last response", style = MaterialTheme.typography.titleSmall)
+            Text(text = ingestViewModel.lastResponse ?: "none")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Last error", style = MaterialTheme.typography.titleSmall)
+            Text(text = ingestViewModel.lastError ?: "none")
         }
     }
 }

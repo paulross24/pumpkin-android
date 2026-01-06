@@ -40,6 +40,11 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateSpeakResponses(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SPEAK_RESPONSES, enabled).apply()
+        _settings.value = loadState()
+    }
+
     private fun loadState(): SettingsState {
         return SettingsState(
             serverUrl = normalizeServerUrl(
@@ -47,6 +52,7 @@ class SettingsRepository(context: Context) {
             ),
             apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
             includeLocation = prefs.getBoolean(KEY_INCLUDE_LOCATION, false),
+            speakResponses = prefs.getBoolean(KEY_SPEAK_RESPONSES, false),
         )
     }
 
@@ -58,7 +64,13 @@ class SettingsRepository(context: Context) {
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_API_KEY = "api_key"
         private const val KEY_INCLUDE_LOCATION = "include_location"
-        private val trackedKeys = setOf(KEY_SERVER_URL, KEY_API_KEY, KEY_INCLUDE_LOCATION)
+        private const val KEY_SPEAK_RESPONSES = "speak_responses"
+        private val trackedKeys = setOf(
+            KEY_SERVER_URL,
+            KEY_API_KEY,
+            KEY_INCLUDE_LOCATION,
+            KEY_SPEAK_RESPONSES,
+        )
 
         const val DEFAULT_SERVER_URL = "https://pumpkin.rosshome.co.uk"
     }
