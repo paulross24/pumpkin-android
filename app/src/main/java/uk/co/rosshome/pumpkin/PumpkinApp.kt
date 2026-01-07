@@ -348,14 +348,22 @@ private fun ProposalsScreen(proposalsViewModel: ProposalsViewModel, padding: Pad
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(state.proposals) { proposal ->
-                ProposalCard(proposal)
+                ProposalCard(
+                    proposal = proposal,
+                    onApprove = { proposalsViewModel.approve(proposal.id) },
+                    onReject = { proposalsViewModel.reject(proposal.id) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ProposalCard(proposal: Proposal) {
+private fun ProposalCard(
+    proposal: Proposal,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(),
@@ -372,6 +380,17 @@ private fun ProposalCard(proposal: Proposal) {
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
                 )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onApprove) {
+                    Text(text = "Approve")
+                }
+                Button(onClick = onReject) {
+                    Text(text = "Reject")
+                }
             }
         }
     }

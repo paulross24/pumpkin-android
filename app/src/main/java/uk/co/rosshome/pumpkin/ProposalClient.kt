@@ -3,9 +3,12 @@ package uk.co.rosshome.pumpkin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class ProposalClient(
     private val httpClient: OkHttpClient = OkHttpClient(),
@@ -55,5 +58,48 @@ class ProposalClient(
                 Result.failure(exc)
             }
         }
+    }
+
+    suspend fun decide(
+        settings: SettingsState,
+        proposalId: Int,
+        decision: String,
+        reason: String?,
+    ): Result<ProposalDecisionResponse> {
+        val payload = ProposalDecisionRequest(
+            id = proposalId,
+            reason = reason,
+            actor = "android",
+        )
+        val body = json.encodeToString(payload)
+        val request = Request.Builder()
+            .url(settings.serverUrl + "/proposals/" + decision)
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .apply {
+                if (settings.apiKey.isNotBlank()) {
+                    addHeader("X-Pumpkin-Key", settings.apiKey)
+                }
+            }
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    val raw = response.body?.string().orEmpty()
+                    if (!response.isSuccessful) {
+                        return@withContext Result.failure(
+                            IllegalStateException("${response.code} ${response.message}")
+                        )
+                    }
+                    Result.success(json.decodeFromString(raw))
+                }
+            } catch (exc: Exception) {
+                Result.failure(exc)
+            }
+        }
+    }
+
+    companion object {
+        private val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }

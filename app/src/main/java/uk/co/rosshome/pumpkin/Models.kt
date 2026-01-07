@@ -48,6 +48,20 @@ data class ProposalsResponse(
 )
 
 @Serializable
+data class ProposalDecisionResponse(
+    val status: String,
+    val id: Int,
+    val decision: String,
+)
+
+@Serializable
+data class ProposalDecisionRequest(
+    val id: Int,
+    val reason: String? = null,
+    val actor: String? = null,
+)
+
+@Serializable
 data class SummaryResponse(
     val status: String,
     val heartbeat: SummaryEvent? = null,

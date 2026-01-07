@@ -36,6 +36,37 @@ class ProposalsViewModel(
             )
         }
     }
+
+    fun approve(proposalId: Int, reason: String? = null) {
+        decide(proposalId, "approve", reason)
+    }
+
+    fun reject(proposalId: Int, reason: String? = null) {
+        decide(proposalId, "reject", reason)
+    }
+
+    private fun decide(proposalId: Int, decision: String, reason: String?) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val settings = settingsRepository.readSettings()
+            val result = proposalClient.decide(settings, proposalId, decision, reason)
+            _state.value = result.fold(
+                onSuccess = {
+                    _state.value.copy(
+                        isLoading = false,
+                        error = null,
+                    )
+                },
+                onFailure = { exc ->
+                    _state.value.copy(
+                        isLoading = false,
+                        error = exc.message ?: "decision failed",
+                    )
+                },
+            )
+            refresh("pending", 50)
+        }
+    }
 }
 
 data class ProposalsState(
