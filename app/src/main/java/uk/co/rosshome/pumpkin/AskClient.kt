@@ -25,12 +25,12 @@ class AskClient(
         deviceId: String,
         location: LocationPayload?,
     ): Result<AskResponse> {
-        val payload = mapOf(
-            "text" to text,
-            "source" to "android",
-            "device" to deviceId,
-            "ts" to Instant.now().toString(),
-            "location" to location,
+        val payload = AskRequest(
+            text = text,
+            source = "android",
+            device = deviceId,
+            ts = Instant.now().toString(),
+            location = location,
         )
         val body = json.encodeToString(payload)
         val request = Request.Builder()

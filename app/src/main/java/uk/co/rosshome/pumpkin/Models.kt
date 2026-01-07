@@ -64,6 +64,15 @@ data class AskResponse(
 )
 
 @Serializable
+data class AskRequest(
+    val text: String,
+    val source: String,
+    val device: String,
+    val ts: String,
+    val location: LocationPayload? = null,
+)
+
+@Serializable
 data class SummaryEvent(
     val id: Int,
     val ts: String,
