@@ -66,74 +66,78 @@ class IngestViewModel(
         viewModelScope.launch {
             isSending = true
             lastError = null
-            val settings = settingsRepository.readSettings()
-            val locationPayload = if (settings.includeLocation && hasLocationPermission()) {
-                val location = locationProvider.lastKnownLocation()
-                if (location != null) {
-                    LocationPayload(
-                        lat = location.latitude,
-                        lon = location.longitude,
-                        accuracy = location.accuracy.toDouble(),
-                    )
+            try {
+                val settings = settingsRepository.readSettings()
+                val locationPayload = if (settings.includeLocation && hasLocationPermission()) {
+                    val location = locationProvider.lastKnownLocation()
+                    if (location != null) {
+                        LocationPayload(
+                            lat = location.latitude,
+                            lon = location.longitude,
+                            accuracy = location.accuracy.toDouble(),
+                        )
+                    } else {
+                        null
+                    }
                 } else {
                     null
                 }
-            } else {
-                null
-            }
-            if (isStatusQuestion(text)) {
-                val summaryResult = summaryClient.fetchSummary(settings)
-                summaryResult.fold(
-                    onSuccess = { summary ->
-                        lastResponse = null
-                        lastHumanResponse = summarizeStatus(summary)
-                },
+                if (isStatusQuestion(text)) {
+                    val summaryResult = summaryClient.fetchSummary(settings)
+                    summaryResult.fold(
+                        onSuccess = { summary ->
+                            lastResponse = null
+                            lastHumanResponse = summarizeStatus(summary)
+                        },
+                        onFailure = { exc ->
+                            lastError = exc.message ?: "summary failed"
+                            lastHumanResponse = "Sorry, I couldn't fetch a system summary."
+                        },
+                    )
+                    if (settings.speakResponses) {
+                        speak(lastHumanResponse)
+                    }
+                    return@launch
+                }
+                val askResult = askClient.ask(text, settings, deviceId, locationPayload)
+                askResult.fold(
+                    onSuccess = { answer ->
+                        lastResponse = answer.reply
+                        lastHumanResponse = answer.reply
+                    },
                     onFailure = { exc ->
-                        lastError = exc.message ?: "summary failed"
-                        lastHumanResponse = "Sorry, I couldn't fetch a system summary."
-                },
-            )
+                        lastError = exc.message ?: "ask failed"
+                    },
+                )
+                if (askResult.isSuccess) {
+                    if (settings.speakResponses) {
+                        speak(lastHumanResponse)
+                    }
+                    return@launch
+                }
+                val entry = ingestClient.sendIngest(text, settings, deviceId, locationPayload)
+                logs.add(0, entry)
+                if (entry.success) {
+                    lastResponse = entry.responseBody ?: "no response body"
+                    lastHumanResponse = humanizeResponse(entry.responseBody)
+                } else {
+                    lastError = entry.message
+                    lastHumanResponse = "Hmm, I couldn't reach Pumpkin. ${entry.message}"
+                }
                 if (settings.speakResponses) {
-                    speak(lastHumanResponse)
+                    val spoken = when {
+                        entry.success && !lastHumanResponse.isNullOrBlank() -> lastHumanResponse
+                        entry.success -> "All set. Sent to Pumpkin."
+                        else -> "Error. ${entry.message}"
+                    }
+                    speak(spoken)
                 }
+            } catch (exc: Exception) {
+                CrashReporter(getApplication()).reportNonFatal(exc)
+                lastError = "App error logged. See crash report."
+            } finally {
                 isSending = false
-                return@launch
             }
-            val askResult = askClient.ask(text, settings, deviceId, locationPayload)
-            askResult.fold(
-                onSuccess = { answer ->
-                    lastResponse = answer.reply
-                    lastHumanResponse = answer.reply
-                },
-                onFailure = { exc ->
-                    lastError = exc.message ?: "ask failed"
-                },
-            )
-            if (askResult.isSuccess) {
-                if (settings.speakResponses) {
-                    speak(lastHumanResponse)
-                }
-                isSending = false
-                return@launch
-            }
-            val entry = ingestClient.sendIngest(text, settings, deviceId, locationPayload)
-            logs.add(0, entry)
-            if (entry.success) {
-                lastResponse = entry.responseBody ?: "no response body"
-                lastHumanResponse = humanizeResponse(entry.responseBody)
-            } else {
-                lastError = entry.message
-                lastHumanResponse = "Hmm, I couldn't reach Pumpkin. ${entry.message}"
-            }
-            if (settings.speakResponses) {
-                val spoken = when {
-                    entry.success && !lastHumanResponse.isNullOrBlank() -> lastHumanResponse
-                    entry.success -> "All set. Sent to Pumpkin."
-                    else -> "Error. ${entry.message}"
-                }
-                speak(spoken)
-            }
-            isSending = false
         }
     }
 

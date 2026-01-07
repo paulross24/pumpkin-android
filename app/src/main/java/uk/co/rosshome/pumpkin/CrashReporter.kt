@@ -15,6 +15,14 @@ class CrashReporter(context: Context) {
     private val store = CrashReportStore(context)
 
     fun reportCrash(throwable: Throwable) {
+        reportError(throwable, fatal = true)
+    }
+
+    fun reportNonFatal(throwable: Throwable) {
+        reportError(throwable, fatal = false)
+    }
+
+    private fun reportError(throwable: Throwable, fatal: Boolean) {
         val settings = settingsRepository.readSettings()
         if (settings.serverUrl.isBlank()) {
             return
@@ -27,6 +35,7 @@ class CrashReporter(context: Context) {
         payload.put("manufacturer", Build.MANUFACTURER)
         payload.put("sdk", Build.VERSION.SDK_INT)
         payload.put("app", "Pumpkin Android")
+        payload.put("fatal", fatal)
 
         store.save(payload.toString())
 
