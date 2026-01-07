@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private enum class Screen(val label: String) {
     HOME("Home"),
@@ -68,6 +72,13 @@ fun PumpkinApp(
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     var screen by remember { mutableStateOf(Screen.HOME) }
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            CrashUploader(context).uploadIfPresent()
+        }
+    }
 
     PumpkinTheme {
         Scaffold(
@@ -533,6 +544,10 @@ private fun ResponseSummary(ingestViewModel: IngestViewModel) {
 
 @Composable
 private fun DebugScreen(ingestViewModel: IngestViewModel, padding: PaddingValues) {
+    val context = LocalContext.current
+    val uploader = remember { CrashUploader(context) }
+    var uploadStatus by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -546,6 +561,26 @@ private fun DebugScreen(ingestViewModel: IngestViewModel, padding: PaddingValues
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = "Last error", style = MaterialTheme.typography.titleSmall)
         Text(text = ingestViewModel.lastError ?: "none")
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = {
+                scope.launch {
+                    val status = withContext(Dispatchers.IO) {
+                        uploader.uploadIfPresent()
+                    }
+                    uploadStatus = status
+                }
+            },
+        ) {
+            Text(text = "Upload crash report")
+        }
+        Text(
+            text = "Crash report: " + if (uploader.hasReport()) "stored" else "none",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (!uploadStatus.isNullOrBlank()) {
+            Text(text = "Upload status: $uploadStatus", style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 

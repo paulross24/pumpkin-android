@@ -11,11 +11,11 @@ class CrashUploader(context: Context) {
     private val store = CrashReportStore(context)
     private val client = OkHttpClient()
 
-    fun uploadIfPresent() {
-        val report = store.load() ?: return
+    fun uploadIfPresent(): String {
+        val report = store.load() ?: return "no report"
         val settings = settingsRepository.readSettings()
         if (settings.serverUrl.isBlank()) {
-            return
+            return "server url missing"
         }
         val request = Request.Builder()
             .url(settings.serverUrl + "/errors")
@@ -31,11 +31,17 @@ class CrashUploader(context: Context) {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     store.clear()
+                    return "uploaded"
                 }
+                return "upload failed ${response.code}"
             }
         } catch (exc: Exception) {
-            return
+            return "upload failed"
         }
+    }
+
+    fun hasReport(): Boolean {
+        return store.load() != null
     }
 
     companion object {
