@@ -415,6 +415,8 @@ private fun SettingsScreen(
     var openAiKey by remember(settings.openAiKey) { mutableStateOf(settings.openAiKey) }
     var voiceMenuOpen by remember { mutableStateOf(false) }
     val voiceOptions = ingestViewModel.availableVoices
+    val scope = rememberCoroutineScope()
+    var llmStatus by remember { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -459,8 +461,24 @@ private fun SettingsScreen(
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
         )
-        Button(onClick = { settingsViewModel.updateOpenAiKey(openAiKey) }) {
+        Button(
+            onClick = {
+                settingsViewModel.updateOpenAiKey(openAiKey)
+                scope.launch {
+                    val status = withContext(Dispatchers.IO) {
+                        LlmConfigClient().pushConfig(settings)
+                    }.fold(
+                        onSuccess = { "sent to server" },
+                        onFailure = { "failed to send" },
+                    )
+                    llmStatus = status
+                }
+            },
+        ) {
             Text(text = "Save OpenAI key")
+        }
+        if (!llmStatus.isNullOrBlank()) {
+            Text(text = "LLM config: $llmStatus", style = MaterialTheme.typography.bodySmall)
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
