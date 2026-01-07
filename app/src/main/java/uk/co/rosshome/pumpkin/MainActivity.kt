@@ -10,6 +10,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            CrashUploader(applicationContext).uploadIfPresent()
             val settingsRepository = remember { SettingsRepository(applicationContext) }
             val settingsViewModel: SettingsViewModel = viewModel(
                 factory = SettingsViewModelFactory(settingsRepository),

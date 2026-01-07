@@ -1,38 +1,25 @@
 package uk.co.rosshome.pumpkin
 
 import android.content.Context
-import android.os.Build
-import java.time.Instant
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 
-class CrashReporter(context: Context) {
+class CrashUploader(context: Context) {
     private val settingsRepository = SettingsRepository(context)
-    private val client = OkHttpClient()
     private val store = CrashReportStore(context)
+    private val client = OkHttpClient()
 
-    fun reportCrash(throwable: Throwable) {
+    fun uploadIfPresent() {
+        val report = store.load() ?: return
         val settings = settingsRepository.readSettings()
         if (settings.serverUrl.isBlank()) {
             return
         }
-        val payload = JSONObject()
-        payload.put("message", throwable.message ?: "crash")
-        payload.put("stack", throwable.stackTraceToString())
-        payload.put("ts", Instant.now().toString())
-        payload.put("device", Build.MODEL)
-        payload.put("manufacturer", Build.MANUFACTURER)
-        payload.put("sdk", Build.VERSION.SDK_INT)
-        payload.put("app", "Pumpkin Android")
-
-        store.save(payload.toString())
-
         val request = Request.Builder()
             .url(settings.serverUrl + "/errors")
-            .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .post(report.toRequestBody(JSON_MEDIA_TYPE))
             .apply {
                 if (settings.apiKey.isNotBlank()) {
                     addHeader("X-Pumpkin-Key", settings.apiKey)
@@ -41,7 +28,11 @@ class CrashReporter(context: Context) {
             .build()
 
         try {
-            client.newCall(request).execute().close()
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    store.clear()
+                }
+            }
         } catch (exc: Exception) {
             return
         }
