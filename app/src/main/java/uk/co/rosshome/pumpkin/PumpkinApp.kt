@@ -435,7 +435,11 @@ private fun ProposalCard(
             Text(text = proposal.summary, style = MaterialTheme.typography.titleSmall)
             Text(text = "Status: ${proposal.status} | Risk: ${proposal.risk}")
             Text(text = "Kind: ${proposal.kind}")
-            val rationale = proposal.details?.jsonObject?.get("rationale")?.jsonPrimitive?.contentOrNull
+            val rationale = try {
+                proposal.details?.jsonObject?.get("rationale")?.jsonPrimitive?.content
+            } catch (exc: Exception) {
+                null
+            }
             if (!rationale.isNullOrBlank()) {
                 Text(text = "Rationale: $rationale", style = MaterialTheme.typography.bodySmall)
             }
