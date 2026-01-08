@@ -10,6 +10,8 @@ class UpdateViewModel(
 ) : ViewModel() {
     var latest: ReleaseInfo? = null
         private set
+    var updateAvailable: Boolean = false
+        private set
     var lastError: String? = null
         private set
     var isChecking: Boolean = false
@@ -22,7 +24,10 @@ class UpdateViewModel(
             try {
                 val result = updateClient.fetchLatest()
                 result.fold(
-                    onSuccess = { latest = it },
+                    onSuccess = {
+                        latest = it
+                        updateAvailable = isUpdateAvailable(BuildConfig.VERSION_NAME, it.tag)
+                    },
                     onFailure = { exc -> lastError = exc.message ?: "update check failed" },
                 )
             } finally {
@@ -30,6 +35,26 @@ class UpdateViewModel(
             }
         }
     }
+}
+
+private fun isUpdateAvailable(current: String, tag: String): Boolean {
+    val currentParts = normalizeVersion(current)
+    val tagParts = normalizeVersion(tag)
+    val max = maxOf(currentParts.size, tagParts.size)
+    for (idx in 0 until max) {
+        val left = currentParts.getOrElse(idx) { 0 }
+        val right = tagParts.getOrElse(idx) { 0 }
+        if (right > left) return true
+        if (right < left) return false
+    }
+    return false
+}
+
+private fun normalizeVersion(value: String): List<Int> {
+    val cleaned = value.trim().removePrefix("v").removePrefix("V")
+    return cleaned.split(".", "-", "_")
+        .mapNotNull { part -> part.toIntOrNull() }
+        .ifEmpty { listOf(0) }
 }
 
 class UpdateViewModelFactory(

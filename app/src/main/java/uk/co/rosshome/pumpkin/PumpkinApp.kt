@@ -148,6 +148,7 @@ private fun HomeScreen(
     val update = updateViewModel.latest
     val updateError = updateViewModel.lastError
     val isChecking = updateViewModel.isChecking
+    val updateAvailable = updateViewModel.updateAvailable
     LaunchedEffect(Unit) {
         homeViewModel.refresh()
     }
@@ -172,6 +173,7 @@ private fun HomeScreen(
             update = update,
             isChecking = isChecking,
             error = updateError,
+            updateAvailable = updateAvailable,
             onCheck = { updateViewModel.check() },
             onOpen = { url ->
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -903,6 +905,7 @@ private fun UpdateCard(
     update: ReleaseInfo?,
     isChecking: Boolean,
     error: String?,
+    updateAvailable: Boolean,
     onCheck: () -> Unit,
     onOpen: (String) -> Unit,
 ) {
@@ -914,10 +917,15 @@ private fun UpdateCard(
                 error != null -> Text(text = "Update check failed: $error")
                 update == null -> Text(text = "No update info yet.")
                 else -> {
+                    Text(text = "Installed: ${BuildConfig.VERSION_NAME}")
                     Text(text = "Latest: ${update.tag}")
-                    val url = update.apkUrl ?: update.htmlUrl
-                    Button(onClick = { onOpen(url) }) {
-                        Text(text = "Open download")
+                    if (updateAvailable) {
+                        val url = update.apkUrl ?: update.htmlUrl
+                        Button(onClick = { onOpen(url) }) {
+                            Text(text = "Open download")
+                        }
+                    } else {
+                        Text(text = "You're up to date.")
                     }
                 }
             }
