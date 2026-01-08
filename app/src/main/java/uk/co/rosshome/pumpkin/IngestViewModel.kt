@@ -35,6 +35,8 @@ class IngestViewModel(
         private set
     var isSending by mutableStateOf(false)
         private set
+    var preferenceStatus by mutableStateOf<String?>(null)
+        private set
 
     private var tts: TextToSpeech? = null
     private var ttsReady = false
@@ -137,6 +139,26 @@ class IngestViewModel(
                 lastError = "App error logged. See crash report."
             } finally {
                 isSending = false
+            }
+        }
+    }
+
+    fun sendPreferenceCommand(text: String) {
+        if (text.isBlank()) {
+            return
+        }
+        viewModelScope.launch {
+            preferenceStatus = null
+            try {
+                val settings = settingsRepository.readSettings()
+                val result = askClient.ask(text, settings, deviceId, null)
+                result.fold(
+                    onSuccess = { preferenceStatus = it.reply },
+                    onFailure = { exc -> preferenceStatus = exc.message ?: "preference update failed" },
+                )
+            } catch (exc: Exception) {
+                CrashReporter(getApplication()).reportNonFatal(exc)
+                preferenceStatus = "Preference update failed. See crash report."
             }
         }
     }

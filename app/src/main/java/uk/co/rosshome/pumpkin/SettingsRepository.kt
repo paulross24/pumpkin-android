@@ -55,6 +55,21 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateQuietHours(value: String) {
+        prefs.edit().putString(KEY_QUIET_HOURS, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateQuietHoursDays(value: String) {
+        prefs.edit().putString(KEY_QUIET_HOURS_DAYS, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateNotificationStyle(value: String) {
+        prefs.edit().putString(KEY_NOTIFICATION_STYLE, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
     private fun loadState(): SettingsState {
         return SettingsState(
             serverUrl = normalizeServerUrl(
@@ -65,6 +80,9 @@ class SettingsRepository(context: Context) {
             includeLocation = prefs.getBoolean(KEY_INCLUDE_LOCATION, false),
             speakResponses = prefs.getBoolean(KEY_SPEAK_RESPONSES, false),
             ttsVoiceName = prefs.getString(KEY_TTS_VOICE, "") ?: "",
+            quietHours = prefs.getString(KEY_QUIET_HOURS, "21:00-06:00") ?: "21:00-06:00",
+            quietHoursDays = prefs.getString(KEY_QUIET_HOURS_DAYS, "weekdays") ?: "weekdays",
+            notificationStyle = prefs.getString(KEY_NOTIFICATION_STYLE, "brief") ?: "brief",
         )
     }
 
@@ -79,6 +97,9 @@ class SettingsRepository(context: Context) {
         private const val KEY_INCLUDE_LOCATION = "include_location"
         private const val KEY_SPEAK_RESPONSES = "speak_responses"
         private const val KEY_TTS_VOICE = "tts_voice"
+        private const val KEY_QUIET_HOURS = "quiet_hours"
+        private const val KEY_QUIET_HOURS_DAYS = "quiet_hours_days"
+        private const val KEY_NOTIFICATION_STYLE = "notification_style"
         private val trackedKeys = setOf(
             KEY_SERVER_URL,
             KEY_API_KEY,
@@ -86,6 +107,9 @@ class SettingsRepository(context: Context) {
             KEY_INCLUDE_LOCATION,
             KEY_SPEAK_RESPONSES,
             KEY_TTS_VOICE,
+            KEY_QUIET_HOURS,
+            KEY_QUIET_HOURS_DAYS,
+            KEY_NOTIFICATION_STYLE,
         )
 
         const val DEFAULT_SERVER_URL = "https://pumpkin.rosshome.co.uk"

@@ -55,6 +55,9 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 private enum class Screen(val label: String) {
     HOME("Home"),
@@ -68,6 +71,7 @@ private enum class Screen(val label: String) {
 fun PumpkinApp(
     settingsViewModel: SettingsViewModel,
     ingestViewModel: IngestViewModel,
+    homeViewModel: HomeViewModel,
     proposalsViewModel: ProposalsViewModel,
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
@@ -96,7 +100,11 @@ fun PumpkinApp(
             },
         ) { padding ->
             when (screen) {
-                Screen.HOME -> HomeScreen(settings = settings, padding = padding)
+                Screen.HOME -> HomeScreen(
+                    settings = settings,
+                    homeViewModel = homeViewModel,
+                    padding = padding,
+                )
                 Screen.PTT -> PushToTalkScreen(
                     ingestViewModel = ingestViewModel,
                     padding = padding,
@@ -113,6 +121,7 @@ fun PumpkinApp(
                 )
                 Screen.DEBUG -> DebugScreen(
                     ingestViewModel = ingestViewModel,
+                    homeViewModel = homeViewModel,
                     padding = padding,
                 )
             }
@@ -121,7 +130,18 @@ fun PumpkinApp(
 }
 
 @Composable
-private fun HomeScreen(settings: SettingsState, padding: PaddingValues) {
+private fun HomeScreen(
+    settings: SettingsState,
+    homeViewModel: HomeViewModel,
+    padding: PaddingValues,
+) {
+    val summary = homeViewModel.summary
+    val errors = homeViewModel.errors
+    val lastError = homeViewModel.lastError
+    val isLoading = homeViewModel.isLoading
+    LaunchedEffect(Unit) {
+        homeViewModel.refresh()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -129,7 +149,16 @@ private fun HomeScreen(settings: SettingsState, padding: PaddingValues) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(text = "Pumpkin", style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "Pumpkin", style = MaterialTheme.typography.headlineMedium)
+            Button(onClick = { homeViewModel.refresh() }, enabled = !isLoading) {
+                Text(text = if (isLoading) "Refreshing..." else "Refresh")
+            }
+        }
         Card {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = "Server", style = MaterialTheme.typography.titleSmall)
@@ -144,6 +173,18 @@ private fun HomeScreen(settings: SettingsState, padding: PaddingValues) {
                 Text(text = if (settings.openAiKey.isBlank()) "not set" else "set")
             }
         }
+        if (lastError != null) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = "Last error", style = MaterialTheme.typography.titleSmall)
+                    Text(text = lastError)
+                }
+            }
+        }
+        HomeSummaryCard(summary = summary)
+        CalendarCard(summary = summary)
+        InventoryCard(summary = summary)
+        LogCard(errors = errors, summary = summary)
         Text(
             text = "Use Push to send text to /ingest. Use Settings to configure server and key.",
             style = MaterialTheme.typography.bodyMedium,
@@ -413,7 +454,12 @@ private fun SettingsScreen(
     var serverUrl by remember(settings.serverUrl) { mutableStateOf(settings.serverUrl) }
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
     var openAiKey by remember(settings.openAiKey) { mutableStateOf(settings.openAiKey) }
+    var quietHours by remember(settings.quietHours) { mutableStateOf(settings.quietHours) }
+    var quietDays by remember(settings.quietHoursDays) { mutableStateOf(settings.quietHoursDays) }
+    var notificationStyle by remember(settings.notificationStyle) { mutableStateOf(settings.notificationStyle) }
     var voiceMenuOpen by remember { mutableStateOf(false) }
+    var daysMenuOpen by remember { mutableStateOf(false) }
+    var styleMenuOpen by remember { mutableStateOf(false) }
     val voiceOptions = ingestViewModel.availableVoices
     val scope = rememberCoroutineScope()
     var llmStatus by remember { mutableStateOf<String?>(null) }
@@ -553,6 +599,106 @@ private fun SettingsScreen(
                 }
             }
         }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(),
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Preferences", style = MaterialTheme.typography.titleSmall)
+                OutlinedTextField(
+                    value = quietHours,
+                    onValueChange = { quietHours = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Quiet hours (HH:MM-HH:MM)") },
+                    singleLine = true,
+                )
+                ExposedDropdownMenuBox(
+                    expanded = daysMenuOpen,
+                    onExpandedChange = { daysMenuOpen = !daysMenuOpen },
+                ) {
+                    OutlinedTextField(
+                        value = quietDays,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Quiet hours days") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = daysMenuOpen) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = daysMenuOpen,
+                        onDismissRequest = { daysMenuOpen = false },
+                    ) {
+                        listOf("weekdays", "weekends", "daily").forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    quietDays = option
+                                    daysMenuOpen = false
+                                },
+                            )
+                        }
+                    }
+                }
+                Button(
+                    onClick = {
+                        settingsViewModel.updateQuietHours(quietHours)
+                        settingsViewModel.updateQuietHoursDays(quietDays)
+                        ingestViewModel.sendPreferenceCommand(
+                            "set quiet hours $quietHours $quietDays",
+                        )
+                    },
+                ) {
+                    Text(text = "Apply quiet hours")
+                }
+                ExposedDropdownMenuBox(
+                    expanded = styleMenuOpen,
+                    onExpandedChange = { styleMenuOpen = !styleMenuOpen },
+                ) {
+                    OutlinedTextField(
+                        value = notificationStyle,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Notification style") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = styleMenuOpen) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = styleMenuOpen,
+                        onDismissRequest = { styleMenuOpen = false },
+                    ) {
+                        listOf("brief", "normal", "detailed").forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    notificationStyle = option
+                                    styleMenuOpen = false
+                                },
+                            )
+                        }
+                    }
+                }
+                Button(
+                    onClick = {
+                        settingsViewModel.updateNotificationStyle(notificationStyle)
+                        ingestViewModel.sendPreferenceCommand(
+                            "set notification style $notificationStyle",
+                        )
+                    },
+                ) {
+                    Text(text = "Apply notification style")
+                }
+                if (!ingestViewModel.preferenceStatus.isNullOrBlank()) {
+                    Text(
+                        text = ingestViewModel.preferenceStatus ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
         if (!hasLocationPermission) {
             TextButton(
                 onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
@@ -580,11 +726,20 @@ private fun ResponseSummary(ingestViewModel: IngestViewModel) {
 }
 
 @Composable
-private fun DebugScreen(ingestViewModel: IngestViewModel, padding: PaddingValues) {
+private fun DebugScreen(
+    ingestViewModel: IngestViewModel,
+    homeViewModel: HomeViewModel,
+    padding: PaddingValues,
+) {
     val context = LocalContext.current
     val uploader = remember { CrashUploader(context) }
     var uploadStatus by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val summary = homeViewModel.summary
+    val errors = homeViewModel.errors
+    LaunchedEffect(Unit) {
+        homeViewModel.refresh()
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -592,7 +747,25 @@ private fun DebugScreen(ingestViewModel: IngestViewModel, padding: PaddingValues
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(text = "Debug", style = MaterialTheme.typography.headlineSmall)
+        Text(text = "Logs", style = MaterialTheme.typography.headlineSmall)
+        if (summary?.homeassistant_last_event != null) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(text = "Last HA event", style = MaterialTheme.typography.titleSmall)
+                    Text(text = formatHaEvent(summary.homeassistant_last_event))
+                }
+            }
+        }
+        if (errors.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(text = "Recent errors", style = MaterialTheme.typography.titleSmall)
+                    errors.take(5).forEach { err ->
+                        Text(text = "${err.ts} • ${err.severity ?: "warn"}")
+                    }
+                }
+            }
+        }
         Text(text = "Last response", style = MaterialTheme.typography.titleSmall)
         Text(text = ingestViewModel.lastResponse ?: "none")
         Spacer(modifier = Modifier.height(8.dp))
@@ -622,6 +795,91 @@ private fun DebugScreen(ingestViewModel: IngestViewModel, padding: PaddingValues
 }
 
 @Composable
+private fun HomeSummaryCard(summary: SummaryResponse?) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "House status", style = MaterialTheme.typography.titleSmall)
+            if (summary == null) {
+                Text(text = "No summary yet.")
+                return@Column
+            }
+            val homeState = summary.home_state
+            val peopleHome = homeState?.people_home ?: summary.homeassistant?.people_home ?: emptyList()
+            Text(text = if (peopleHome.isEmpty()) "No one is marked as home." else "Home: ${peopleHome.joinToString()}")
+            if (!homeState?.doors_open.isNullOrEmpty()) {
+                Text(text = "Doors open: ${homeState?.doors_open?.joinToString()}")
+            }
+            if (!homeState?.windows_open.isNullOrEmpty()) {
+                Text(text = "Windows open: ${homeState?.windows_open?.joinToString()}")
+            }
+            if (!homeState?.motion_active.isNullOrEmpty()) {
+                Text(text = "Motion: ${homeState?.motion_active?.joinToString()}")
+            }
+            if (!homeState?.lights_on.isNullOrEmpty()) {
+                Text(text = "Lights on: ${homeState?.lights_on?.joinToString()}")
+            }
+            if (summary.issues.isNotEmpty()) {
+                Text(text = "Issues: ${summary.issues.joinToString { it.message }}")
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarCard(summary: SummaryResponse?) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "Calendar", style = MaterialTheme.typography.titleSmall)
+            val events = summary?.homeassistant?.upcoming_events ?: emptyList()
+            if (events.isEmpty()) {
+                Text(text = "No upcoming events.")
+            } else {
+                events.take(3).forEach { event ->
+                    val whenText = formatCalendarTime(event.start)
+                    Text(text = "${event.summary ?: "Untitled"} • $whenText")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InventoryCard(summary: SummaryResponse?) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "Inventory", style = MaterialTheme.typography.titleSmall)
+            val homeState = summary?.home_state
+            Text(text = "Doors open: " + (homeState?.doors_open?.joinToString() ?: "none"))
+            Text(text = "Windows open: " + (homeState?.windows_open?.joinToString() ?: "none"))
+            Text(text = "Lights on: " + (homeState?.lights_on?.joinToString() ?: "none"))
+        }
+    }
+}
+
+@Composable
+private fun LogCard(errors: List<ErrorReport>, summary: SummaryResponse?) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "Live log", style = MaterialTheme.typography.titleSmall)
+            val lastEvent = summary?.homeassistant_last_event
+            if (lastEvent != null) {
+                Text(text = "Last HA: ${formatHaEvent(lastEvent)}")
+            } else {
+                Text(text = "Last HA: none")
+            }
+            if (errors.isNotEmpty()) {
+                Text(text = "Recent errors:")
+                errors.take(3).forEach { err ->
+                    Text(text = "${err.ts} • ${err.severity ?: "warn"}")
+                }
+            } else {
+                Text(text = "No recent errors.")
+            }
+        }
+    }
+}
+
+@Composable
 private fun ResponseLogCard(entry: IngestLogEntry) {
     Card(
         colors = CardDefaults.cardColors(),
@@ -646,6 +904,29 @@ private fun ResponseLogCard(entry: IngestLogEntry) {
                 )
             }
         }
+    }
+}
+
+private fun formatHaEvent(event: HomeassistantLastEvent): String {
+    val payload = event.payload
+    return if (payload?.entity_id != null && payload.state != null) {
+        "${payload.entity_id} -> ${payload.state}"
+    } else {
+        event.event_type ?: "event"
+    }
+}
+
+private fun formatCalendarTime(element: JsonElement?): String {
+    if (element == null) {
+        return "unscheduled"
+    }
+    return try {
+        val obj = element.jsonObject
+        val dt = obj["dateTime"]?.jsonPrimitive?.contentOrNull
+        val date = obj["date"]?.jsonPrimitive?.contentOrNull
+        dt ?: date ?: element.jsonPrimitive.contentOrNull ?: "unscheduled"
+    } catch (exc: IllegalStateException) {
+        element.jsonPrimitive.contentOrNull ?: "unscheduled"
     }
 }
 

@@ -66,6 +66,9 @@ data class SummaryResponse(
     val status: String,
     val heartbeat: SummaryEvent? = null,
     val system_snapshot: SystemSnapshot? = null,
+    val homeassistant: HomeassistantSummary? = null,
+    val homeassistant_last_event: HomeassistantLastEvent? = null,
+    val home_state: HomeStateSummary? = null,
     val issues: List<SummaryIssue> = emptyList(),
     val proposals: List<SummaryProposal> = emptyList(),
     val proposal_count: Int = 0,
@@ -94,6 +97,74 @@ data class SummaryEvent(
     val type: String,
     val payload: JsonElement? = null,
     val severity: String,
+)
+
+@Serializable
+data class HomeassistantSummary(
+    val people_home: List<String> = emptyList(),
+    val people: List<HomeassistantPerson> = emptyList(),
+    val zones: List<HomeassistantZone> = emptyList(),
+    val calendars: List<HomeassistantCalendar> = emptyList(),
+    val upcoming_events: List<HomeassistantCalendarEvent> = emptyList(),
+    val calendar_error: String? = null,
+)
+
+@Serializable
+data class HomeassistantPerson(
+    val entity_id: String,
+    val name: String? = null,
+    val state: String? = null,
+)
+
+@Serializable
+data class HomeassistantZone(
+    val entity_id: String,
+    val name: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val radius: Double? = null,
+    val passive: Boolean? = null,
+    val icon: String? = null,
+)
+
+@Serializable
+data class HomeassistantCalendar(
+    val entity_id: String,
+    val name: String? = null,
+)
+
+@Serializable
+data class HomeassistantCalendarEvent(
+    val calendar: String? = null,
+    val entity_id: String? = null,
+    val summary: String? = null,
+    val start: JsonElement? = null,
+    val end: JsonElement? = null,
+    val location: String? = null,
+)
+
+@Serializable
+data class HomeassistantLastEvent(
+    val event_type: String? = null,
+    val origin: String? = null,
+    val time_fired: String? = null,
+    val payload: HomeassistantEventPayload? = null,
+)
+
+@Serializable
+data class HomeassistantEventPayload(
+    val entity_id: String? = null,
+    val state: String? = null,
+    val attributes: JsonElement? = null,
+)
+
+@Serializable
+data class HomeStateSummary(
+    val people_home: List<String> = emptyList(),
+    val doors_open: List<String> = emptyList(),
+    val windows_open: List<String> = emptyList(),
+    val motion_active: List<String> = emptyList(),
+    val lights_on: List<String> = emptyList(),
 )
 
 @Serializable
@@ -142,6 +213,20 @@ data class MemInfo(
     val MemAvailable: Long? = null,
 )
 
+@Serializable
+data class ErrorsResponse(
+    val count: Int,
+    val errors: List<ErrorReport> = emptyList(),
+)
+
+@Serializable
+data class ErrorReport(
+    val id: Int,
+    val ts: String,
+    val payload: JsonElement? = null,
+    val severity: String? = null,
+)
+
 data class IngestLogEntry(
     val timestamp: String,
     val success: Boolean,
@@ -156,4 +241,7 @@ data class SettingsState(
     val includeLocation: Boolean,
     val speakResponses: Boolean,
     val ttsVoiceName: String,
+    val quietHours: String,
+    val quietHoursDays: String,
+    val notificationStyle: String,
 )

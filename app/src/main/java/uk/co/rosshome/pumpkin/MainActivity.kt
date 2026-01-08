@@ -30,10 +30,18 @@ class MainActivity : ComponentActivity() {
                     ProposalClient(),
                 ),
             )
+            val homeViewModel: HomeViewModel = viewModel(
+                factory = HomeViewModelFactory(
+                    settingsRepository,
+                    SummaryClient(),
+                    ErrorsClient(),
+                ),
+            )
 
             PumpkinApp(
                 settingsViewModel = settingsViewModel,
                 ingestViewModel = ingestViewModel,
+                homeViewModel = homeViewModel,
                 proposalsViewModel = proposalsViewModel,
             )
         }

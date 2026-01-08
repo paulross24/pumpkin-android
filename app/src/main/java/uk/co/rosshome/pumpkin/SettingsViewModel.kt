@@ -19,6 +19,9 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             includeLocation = false,
             speakResponses = false,
             ttsVoiceName = "",
+            quietHours = "21:00-06:00",
+            quietHoursDays = "weekdays",
+            notificationStyle = "brief",
         ),
     )
 
@@ -55,6 +58,24 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateTtsVoiceName(value: String) {
         viewModelScope.launch {
             repository.updateTtsVoiceName(value)
+        }
+    }
+
+    fun updateQuietHours(value: String) {
+        viewModelScope.launch {
+            repository.updateQuietHours(value)
+        }
+    }
+
+    fun updateQuietHoursDays(value: String) {
+        viewModelScope.launch {
+            repository.updateQuietHoursDays(value)
+        }
+    }
+
+    fun updateNotificationStyle(value: String) {
+        viewModelScope.launch {
+            repository.updateNotificationStyle(value)
         }
     }
 }
