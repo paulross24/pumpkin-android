@@ -59,6 +59,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import uk.co.rosshome.pumpkin.BuildConfig
 
 private enum class Screen(val label: String) {
     HOME("Home"),

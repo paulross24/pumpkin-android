@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import uk.co.rosshome.pumpkin.BuildConfig
 
 class UpdateViewModel(
     private val updateClient: UpdateClient,
