@@ -140,6 +140,7 @@ private fun HomeScreen(
     updateViewModel: UpdateViewModel,
     padding: PaddingValues,
 ) {
+    val context = LocalContext.current
     val summary = homeViewModel.summary
     val errors = homeViewModel.errors
     val lastError = homeViewModel.lastError
@@ -970,11 +971,11 @@ private fun formatCalendarTime(element: JsonElement?): String {
     }
     return try {
         val obj = element.jsonObject
-        val dt = obj["dateTime"]?.jsonPrimitive?.contentOrNull
-        val date = obj["date"]?.jsonPrimitive?.contentOrNull
-        dt ?: date ?: element.jsonPrimitive.contentOrNull ?: "unscheduled"
-    } catch (exc: IllegalStateException) {
-        element.jsonPrimitive.contentOrNull ?: "unscheduled"
+        val dt = obj["dateTime"]?.jsonPrimitive?.content
+        val date = obj["date"]?.jsonPrimitive?.content
+        dt ?: date ?: element.jsonPrimitive.content
+    } catch (exc: Exception) {
+        "unscheduled"
     }
 }
 
