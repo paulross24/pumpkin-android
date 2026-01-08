@@ -435,6 +435,10 @@ private fun ProposalCard(
             Text(text = proposal.summary, style = MaterialTheme.typography.titleSmall)
             Text(text = "Status: ${proposal.status} | Risk: ${proposal.risk}")
             Text(text = "Kind: ${proposal.kind}")
+            val rationale = proposal.details?.jsonObject?.get("rationale")?.jsonPrimitive?.contentOrNull
+            if (!rationale.isNullOrBlank()) {
+                Text(text = "Rationale: $rationale", style = MaterialTheme.typography.bodySmall)
+            }
             Text(text = "Expected: ${proposal.expected_outcome}", style = MaterialTheme.typography.bodySmall)
             if (!proposal.ai_context_excerpt.isNullOrBlank()) {
                 Text(
