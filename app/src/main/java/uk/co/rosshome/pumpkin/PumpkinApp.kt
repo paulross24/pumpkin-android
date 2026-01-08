@@ -2,6 +2,7 @@ package uk.co.rosshome.pumpkin
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -72,6 +73,7 @@ fun PumpkinApp(
     settingsViewModel: SettingsViewModel,
     ingestViewModel: IngestViewModel,
     homeViewModel: HomeViewModel,
+    updateViewModel: UpdateViewModel,
     proposalsViewModel: ProposalsViewModel,
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
@@ -82,6 +84,7 @@ fun PumpkinApp(
         withContext(Dispatchers.IO) {
             CrashUploader(context).uploadIfPresent()
         }
+        updateViewModel.check()
     }
 
     PumpkinTheme {
@@ -103,6 +106,7 @@ fun PumpkinApp(
                 Screen.HOME -> HomeScreen(
                     settings = settings,
                     homeViewModel = homeViewModel,
+                    updateViewModel = updateViewModel,
                     padding = padding,
                 )
                 Screen.PTT -> PushToTalkScreen(
@@ -133,12 +137,16 @@ fun PumpkinApp(
 private fun HomeScreen(
     settings: SettingsState,
     homeViewModel: HomeViewModel,
+    updateViewModel: UpdateViewModel,
     padding: PaddingValues,
 ) {
     val summary = homeViewModel.summary
     val errors = homeViewModel.errors
     val lastError = homeViewModel.lastError
     val isLoading = homeViewModel.isLoading
+    val update = updateViewModel.latest
+    val updateError = updateViewModel.lastError
+    val isChecking = updateViewModel.isChecking
     LaunchedEffect(Unit) {
         homeViewModel.refresh()
     }
@@ -159,6 +167,16 @@ private fun HomeScreen(
                 Text(text = if (isLoading) "Refreshing..." else "Refresh")
             }
         }
+        UpdateCard(
+            update = update,
+            isChecking = isChecking,
+            error = updateError,
+            onCheck = { updateViewModel.check() },
+            onOpen = { url ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                context.startActivity(intent)
+            },
+        )
         Card {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = "Server", style = MaterialTheme.typography.titleSmall)
@@ -874,6 +892,36 @@ private fun LogCard(errors: List<ErrorReport>, summary: SummaryResponse?) {
                 }
             } else {
                 Text(text = "No recent errors.")
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateCard(
+    update: ReleaseInfo?,
+    isChecking: Boolean,
+    error: String?,
+    onCheck: () -> Unit,
+    onOpen: (String) -> Unit,
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "Updates", style = MaterialTheme.typography.titleSmall)
+            when {
+                isChecking -> Text(text = "Checking for updates...")
+                error != null -> Text(text = "Update check failed: $error")
+                update == null -> Text(text = "No update info yet.")
+                else -> {
+                    Text(text = "Latest: ${update.tag}")
+                    val url = update.apkUrl ?: update.htmlUrl
+                    Button(onClick = { onOpen(url) }) {
+                        Text(text = "Open download")
+                    }
+                }
+            }
+            TextButton(onClick = onCheck) {
+                Text(text = "Check again")
             }
         }
     }

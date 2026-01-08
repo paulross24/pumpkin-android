@@ -37,11 +37,15 @@ class MainActivity : ComponentActivity() {
                     ErrorsClient(),
                 ),
             )
+            val updateViewModel: UpdateViewModel = viewModel(
+                factory = UpdateViewModelFactory(UpdateClient()),
+            )
 
             PumpkinApp(
                 settingsViewModel = settingsViewModel,
                 ingestViewModel = ingestViewModel,
                 homeViewModel = homeViewModel,
+                updateViewModel = updateViewModel,
                 proposalsViewModel = proposalsViewModel,
             )
         }
