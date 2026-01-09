@@ -39,6 +39,9 @@ class IngestClient(
                 if (settings.apiKey.isNotBlank()) {
                     addHeader("X-Pumpkin-Key", settings.apiKey)
                 }
+                if (settings.openAiKey.isNotBlank()) {
+                    addHeader("X-Pumpkin-OpenAI-Key", settings.openAiKey)
+                }
             }
             .build()
 
