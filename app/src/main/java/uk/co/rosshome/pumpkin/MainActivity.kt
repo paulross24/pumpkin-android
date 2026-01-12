@@ -30,6 +30,13 @@ class MainActivity : ComponentActivity() {
                     ProposalClient(),
                 ),
             )
+            val improvementsViewModel: ProposalsViewModel = viewModel(
+                key = "improvements",
+                factory = ProposalsViewModelFactory(
+                    settingsRepository,
+                    ProposalClient(),
+                ),
+            )
             val homeViewModel: HomeViewModel = viewModel(
                 factory = HomeViewModelFactory(
                     settingsRepository,
@@ -47,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 homeViewModel = homeViewModel,
                 updateViewModel = updateViewModel,
                 proposalsViewModel = proposalsViewModel,
+                improvementsViewModel = improvementsViewModel,
             )
         }
     }

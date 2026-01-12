@@ -56,15 +56,18 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import uk.co.rosshome.pumpkin.BuildConfig
 
 private enum class Screen(val label: String) {
     HOME("Home"),
     PTT("Push"),
     PROPOSALS("Proposals"),
+    IMPROVEMENTS("Improvements"),
     SETTINGS("Settings"),
     DEBUG("Debug"),
 }
@@ -76,6 +79,7 @@ fun PumpkinApp(
     homeViewModel: HomeViewModel,
     updateViewModel: UpdateViewModel,
     proposalsViewModel: ProposalsViewModel,
+    improvementsViewModel: ProposalsViewModel,
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     var screen by remember { mutableStateOf(Screen.HOME) }
@@ -116,6 +120,10 @@ fun PumpkinApp(
                 )
                 Screen.PROPOSALS -> ProposalsScreen(
                     proposalsViewModel = proposalsViewModel,
+                    padding = padding,
+                )
+                Screen.IMPROVEMENTS -> ImprovementsScreen(
+                    improvementsViewModel = improvementsViewModel,
                     padding = padding,
                 )
                 Screen.SETTINGS -> SettingsScreen(
@@ -415,6 +423,121 @@ private fun ProposalsScreen(proposalsViewModel: ProposalsViewModel, padding: Pad
                     proposal = proposal,
                     onApprove = { proposalsViewModel.approve(proposal.id) },
                     onReject = { proposalsViewModel.reject(proposal.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImprovementsScreen(improvementsViewModel: ProposalsViewModel, padding: PaddingValues) {
+    val state by improvementsViewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        improvementsViewModel.refresh(status = "approved", limit = 50)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "Improvements", style = MaterialTheme.typography.headlineSmall)
+            Button(onClick = { improvementsViewModel.refresh(status = "approved", limit = 50) }) {
+                Text(text = "Refresh")
+            }
+        }
+        if (state.isLoading) {
+            Text(text = "Loading...", style = MaterialTheme.typography.bodySmall)
+        }
+        if (!state.error.isNullOrBlank()) {
+            Text(text = "Error: ${state.error}", style = MaterialTheme.typography.bodySmall)
+        }
+        if (state.proposals.isEmpty() && !state.isLoading) {
+            Text(text = "No improvements recorded yet.", style = MaterialTheme.typography.bodySmall)
+        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(state.proposals) { proposal ->
+                ImprovementCard(proposal = proposal)
+            }
+        }
+    }
+}
+
+private fun extractSteps(details: JsonElement?): List<String> {
+    return try {
+        val stepsElement = details?.jsonObject?.get("steps") as? JsonArray
+        stepsElement?.mapNotNull { it.jsonPrimitive.contentOrNull }?.filter { it.isNotBlank() }
+            ?: emptyList()
+    } catch (exc: Exception) {
+        emptyList()
+    }
+}
+
+@Composable
+private fun ImprovementCard(proposal: Proposal) {
+    val rationale = try {
+        proposal.details?.jsonObject?.get("rationale")?.jsonPrimitive?.content
+    } catch (exc: Exception) {
+        null
+    }
+    val actionType = try {
+        proposal.details?.jsonObject?.get("action_type")?.jsonPrimitive?.content
+    } catch (exc: Exception) {
+        null
+    }
+    val actionParams = try {
+        proposal.details?.jsonObject?.get("action_params")?.jsonObject?.toString()
+    } catch (exc: Exception) {
+        null
+    }
+    val steps = extractSteps(proposal.details)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = proposal.summary, style = MaterialTheme.typography.titleSmall)
+            Text(text = "Status: ${proposal.status} | Risk: ${proposal.risk}")
+            Text(text = "Kind: ${proposal.kind}")
+            if (!rationale.isNullOrBlank()) {
+                Text(text = "Rationale: $rationale", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(text = "Expected: ${proposal.expected_outcome}", style = MaterialTheme.typography.bodySmall)
+            if (!proposal.ai_context_excerpt.isNullOrBlank()) {
+                Text(
+                    text = proposal.ai_context_excerpt,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if (!actionType.isNullOrBlank()) {
+                Text(text = "Action: $actionType", style = MaterialTheme.typography.bodySmall)
+            }
+            if (!actionParams.isNullOrBlank()) {
+                Text(text = "Params: $actionParams", style = MaterialTheme.typography.bodySmall)
+            }
+            if (steps.isNotEmpty()) {
+                Text(text = "Actuation steps:", style = MaterialTheme.typography.bodySmall)
+                steps.forEach { step ->
+                    Text(text = "- $step", style = MaterialTheme.typography.bodySmall)
+                }
+            } else {
+                Text(
+                    text = "Actuation steps: (not provided yet)",
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
