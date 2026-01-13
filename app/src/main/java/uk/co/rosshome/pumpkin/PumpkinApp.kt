@@ -84,9 +84,11 @@ fun PumpkinApp(
     updateViewModel: UpdateViewModel,
     proposalsViewModel: ProposalsViewModel,
     improvementsViewModel: ProposalsViewModel,
+    assistantTrigger: Long,
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     var screen by remember { mutableStateOf(Screen.HOME) }
+    var pttAutoListenKey by remember { mutableStateOf(0L) }
     val context = LocalContext.current
     val hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         ContextCompat.checkSelfPermission(
@@ -105,6 +107,12 @@ fun PumpkinApp(
     }
     LaunchedEffect(settings.assistantEnabled, hasNotificationPermission) {
         AssistantServiceController.stop(context)
+    }
+    LaunchedEffect(assistantTrigger) {
+        if (assistantTrigger != 0L) {
+            screen = Screen.PTT
+            pttAutoListenKey = assistantTrigger
+        }
     }
 
     PumpkinTheme {
@@ -132,6 +140,7 @@ fun PumpkinApp(
                 Screen.PTT -> PushToTalkScreen(
                     ingestViewModel = ingestViewModel,
                     padding = padding,
+                    autoListenKey = pttAutoListenKey,
                 )
                 Screen.PROPOSALS -> ProposalsScreen(
                     proposalsViewModel = proposalsViewModel,
@@ -239,7 +248,11 @@ private fun HomeScreen(
 }
 
 @Composable
-private fun PushToTalkScreen(ingestViewModel: IngestViewModel, padding: PaddingValues) {
+private fun PushToTalkScreen(
+    ingestViewModel: IngestViewModel,
+    padding: PaddingValues,
+    autoListenKey: Long,
+) {
     var text by remember { mutableStateOf("") }
     val logs = ingestViewModel.logs
     val context = LocalContext.current
@@ -317,9 +330,37 @@ private fun PushToTalkScreen(ingestViewModel: IngestViewModel, padding: PaddingV
             }
         }
     }
+    fun startListening() {
+        if (!hasAudioPermission) {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            speechStatus = "Microphone permission required"
+            return
+        }
+        if (recognizer == null) {
+            speechStatus = "Speech recognizer unavailable"
+            return
+        }
+        recognizer.setRecognitionListener(listener)
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+            )
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+        }
+        recognizer.startListening(intent)
+        isListening = true
+        speechStatus = "Starting..."
+    }
     DisposableEffect(recognizer) {
         onDispose {
             recognizer?.destroy()
+        }
+    }
+    LaunchedEffect(autoListenKey) {
+        if (autoListenKey != 0L && !isListening) {
+            startListening()
         }
     }
 
@@ -349,31 +390,12 @@ private fun PushToTalkScreen(ingestViewModel: IngestViewModel, padding: PaddingV
         }
         Button(
             onClick = {
-                if (!hasAudioPermission) {
-                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                    return@Button
-                }
-                if (recognizer == null) {
-                    speechStatus = "Speech recognizer unavailable"
-                    return@Button
-                }
                 if (isListening) {
-                    recognizer.stopListening()
+                    recognizer?.stopListening()
                     isListening = false
                     speechStatus = "Stopped"
                 } else {
-                    recognizer.setRecognitionListener(listener)
-                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                        putExtra(
-                            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-                        )
-                        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                    }
-                    recognizer.startListening(intent)
-                    isListening = true
-                    speechStatus = "Starting..."
+                    startListening()
                 }
             },
             enabled = !ingestViewModel.isSending,

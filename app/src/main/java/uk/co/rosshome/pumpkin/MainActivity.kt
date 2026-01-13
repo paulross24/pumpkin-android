@@ -1,14 +1,21 @@
 package uk.co.rosshome.pumpkin
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
+    private var assistantTrigger by mutableStateOf(0L)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleAssistantIntent(intent)
         setContent {
             val settingsRepository = remember { SettingsRepository(applicationContext) }
             val settingsViewModel: SettingsViewModel = viewModel(
@@ -55,7 +62,23 @@ class MainActivity : ComponentActivity() {
                 updateViewModel = updateViewModel,
                 proposalsViewModel = proposalsViewModel,
                 improvementsViewModel = improvementsViewModel,
+                assistantTrigger = assistantTrigger,
             )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleAssistantIntent(intent)
+    }
+
+    private fun handleAssistantIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        if (action == Intent.ACTION_ASSIST ||
+            action == "android.intent.action.VOICE_ASSIST" ||
+            action == Intent.ACTION_VOICE_COMMAND
+        ) {
+            assistantTrigger = System.currentTimeMillis()
         }
     }
 }
