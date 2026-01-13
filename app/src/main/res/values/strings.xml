@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Pumpkin</string>
+    <string name="assistant_accessibility_description">Pumpkin assistant event bridge.</string>
 </resources>
