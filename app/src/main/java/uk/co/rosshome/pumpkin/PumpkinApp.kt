@@ -250,6 +250,7 @@ private fun HomeScreen(
         HomeSummaryCard(summary = summary)
         CalendarCard(summary = summary)
         InventoryCard(summary = summary)
+        NetworkDiscoveryCard(summary = summary)
         LogCard(errors = errors, summary = summary)
         Text(
             text = "Use Assistant to talk or type. Settings controls server and key.",
@@ -1303,6 +1304,37 @@ private fun InventoryCard(summary: SummaryResponse?) {
             Text(text = "Doors open: " + (homeState?.doors_open?.joinToString() ?: "none"))
             Text(text = "Windows open: " + (homeState?.windows_open?.joinToString() ?: "none"))
             Text(text = "Lights on: " + (homeState?.lights_on?.joinToString() ?: "none"))
+        }
+    }
+}
+
+@Composable
+private fun NetworkDiscoveryCard(summary: SummaryResponse?) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = "Network discovery", style = MaterialTheme.typography.titleSmall)
+            if (summary == null) {
+                Text(text = "No network snapshot yet.")
+                return
+            }
+            val snapshot = summary.network_discovery
+            if (snapshot == null) {
+                Text(text = "Discovery not available.")
+                return
+            }
+            Text(text = "Devices: ${snapshot.device_count}")
+            val devices = snapshot.devices.take(6)
+            if (devices.isEmpty()) {
+                Text(text = "No devices detected yet.")
+                return
+            }
+            devices.forEach { device ->
+                val ports = if (device.open_ports.isEmpty()) "no ports" else device.open_ports.joinToString()
+                Text(text = "${device.ip ?: "unknown"} • $ports")
+            }
+            if (snapshot.device_count > devices.size) {
+                Text(text = "And ${snapshot.device_count - devices.size} more...")
+            }
         }
     }
 }

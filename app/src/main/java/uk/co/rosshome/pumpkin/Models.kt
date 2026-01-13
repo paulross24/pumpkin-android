@@ -69,6 +69,7 @@ data class SummaryResponse(
     val homeassistant: HomeassistantSummary? = null,
     val homeassistant_last_event: HomeassistantLastEvent? = null,
     val home_state: HomeStateSummary? = null,
+    val network_discovery: NetworkDiscoverySnapshot? = null,
     val issues: List<SummaryIssue> = emptyList(),
     val proposals: List<SummaryProposal> = emptyList(),
     val proposal_count: Int = 0,
@@ -165,6 +166,22 @@ data class HomeStateSummary(
     val windows_open: List<String> = emptyList(),
     val motion_active: List<String> = emptyList(),
     val lights_on: List<String> = emptyList(),
+)
+
+@Serializable
+data class NetworkDiscoverySnapshot(
+    val local_ip: String? = null,
+    val subnet: String? = null,
+    val device_count: Int = 0,
+    val devices: List<NetworkDevice> = emptyList(),
+)
+
+@Serializable
+data class NetworkDevice(
+    val ip: String? = null,
+    val mac: String? = null,
+    val device: String? = null,
+    val open_ports: List<Int> = emptyList(),
 )
 
 @Serializable
