@@ -5,22 +5,26 @@ import android.provider.Settings
 
 object AssistantStatus {
     fun isNotificationListenerEnabled(context: Context): Boolean {
-        val enabled = Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_notification_listeners",
-        ) ?: return false
-        return enabled.split(":").any { entry ->
-            entry.contains(context.packageName)
-        }
+        return runCatching {
+            val enabled = Settings.Secure.getString(
+                context.contentResolver,
+                "enabled_notification_listeners",
+            ) ?: return@runCatching false
+            enabled.split(":").any { entry ->
+                entry.contains(context.packageName)
+            }
+        }.getOrDefault(false)
     }
 
     fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val enabled = Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_accessibility_services",
-        ) ?: return false
-        return enabled.split(":").any { entry ->
-            entry.contains(context.packageName)
-        }
+        return runCatching {
+            val enabled = Settings.Secure.getString(
+                context.contentResolver,
+                "enabled_accessibility_services",
+            ) ?: return@runCatching false
+            enabled.split(":").any { entry ->
+                entry.contains(context.packageName)
+            }
+        }.getOrDefault(false)
     }
 }

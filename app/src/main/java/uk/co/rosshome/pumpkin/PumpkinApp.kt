@@ -86,6 +86,14 @@ fun PumpkinApp(
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     var screen by remember { mutableStateOf(Screen.HOME) }
     val context = LocalContext.current
+    val hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -93,8 +101,8 @@ fun PumpkinApp(
         }
         updateViewModel.check()
     }
-    LaunchedEffect(settings.assistantEnabled) {
-        if (settings.assistantEnabled) {
+    LaunchedEffect(settings.assistantEnabled, hasNotificationPermission) {
+        if (settings.assistantEnabled && hasNotificationPermission) {
             AssistantServiceController.start(context)
         } else {
             AssistantServiceController.stop(context)
@@ -643,8 +651,10 @@ private fun SettingsScreen(
     }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { _ ->
-        // Update happens on toggle; we only request permission here.
+    ) { granted ->
+        if (granted) {
+            settingsViewModel.updateAssistantEnabled(true)
+        }
     }
 
     Column(
@@ -798,8 +808,9 @@ private fun SettingsScreen(
                         onCheckedChange = { enabled ->
                             if (enabled && !hasNotificationPermission) {
                                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                settingsViewModel.updateAssistantEnabled(enabled)
                             }
-                            settingsViewModel.updateAssistantEnabled(enabled)
                         },
                     )
                 }

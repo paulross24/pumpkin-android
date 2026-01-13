@@ -6,16 +6,24 @@ import androidx.core.content.ContextCompat
 
 object AssistantServiceController {
     fun start(context: Context) {
-        val intent = Intent(context, AssistantService::class.java).apply {
-            action = AssistantService.ACTION_START
+        runCatching {
+            val intent = Intent(context, AssistantService::class.java).apply {
+                action = AssistantService.ACTION_START
+            }
+            ContextCompat.startForegroundService(context, intent)
+        }.onFailure { exc ->
+            CrashReporter(context).reportNonFatal(exc)
         }
-        ContextCompat.startForegroundService(context, intent)
     }
 
     fun stop(context: Context) {
-        val intent = Intent(context, AssistantService::class.java).apply {
-            action = AssistantService.ACTION_STOP
+        runCatching {
+            val intent = Intent(context, AssistantService::class.java).apply {
+                action = AssistantService.ACTION_STOP
+            }
+            context.startService(intent)
+        }.onFailure { exc ->
+            CrashReporter(context).reportNonFatal(exc)
         }
-        context.startService(intent)
     }
 }
