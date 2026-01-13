@@ -656,352 +656,370 @@ private fun SettingsScreen(
         }
     }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding)
-            .padding(16.dp),
+            .padding(padding),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(text = "Settings", style = MaterialTheme.typography.headlineSmall)
-        OutlinedTextField(
-            value = serverUrl,
-            onValueChange = { serverUrl = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Server URL") },
-            singleLine = true,
-        )
-        Button(onClick = { settingsViewModel.updateServerUrl(serverUrl) }) {
-            Text(text = "Save server URL")
+        item { Text(text = "Settings", style = MaterialTheme.typography.headlineSmall) }
+        item {
+            OutlinedTextField(
+                value = serverUrl,
+                onValueChange = { serverUrl = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Server URL") },
+                singleLine = true,
+            )
         }
-        OutlinedTextField(
-            value = apiKey,
-            onValueChange = { apiKey = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("API Key") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-        )
-        Button(onClick = { settingsViewModel.updateApiKey(apiKey) }) {
-            Text(text = "Save API key")
+        item { Button(onClick = { settingsViewModel.updateServerUrl(serverUrl) }) { Text(text = "Save server URL") } }
+        item {
+            OutlinedTextField(
+                value = apiKey,
+                onValueChange = { apiKey = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("API Key") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+            )
         }
-        OutlinedTextField(
-            value = openAiKey,
-            onValueChange = { openAiKey = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("OpenAI API Key") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-        )
-        Button(
-            onClick = {
-                settingsViewModel.updateOpenAiKey(openAiKey)
-                scope.launch {
-                    val status = withContext(Dispatchers.IO) {
-                        LlmConfigClient().pushConfig(settings)
-                    }.fold(
-                        onSuccess = { "sent to server" },
-                        onFailure = { "failed to send" },
-                    )
-                    llmStatus = status
-                }
-            },
-        ) {
-            Text(text = "Save OpenAI key")
+        item { Button(onClick = { settingsViewModel.updateApiKey(apiKey) }) { Text(text = "Save API key") } }
+        item {
+            OutlinedTextField(
+                value = openAiKey,
+                onValueChange = { openAiKey = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("OpenAI API Key") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+            )
         }
-        if (!llmStatus.isNullOrBlank()) {
-            Text(text = "LLM config: $llmStatus", style = MaterialTheme.typography.bodySmall)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column {
-                Text(text = "Include last known location")
-                if (!hasLocationPermission && settings.includeLocation) {
-                    Text(text = "Location permission required")
-                }
-            }
-            Switch(
-                checked = settings.includeLocation,
-                onCheckedChange = { enabled ->
-                    if (enabled && !hasLocationPermission) {
-                        permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                    } else {
-                        settingsViewModel.updateIncludeLocation(enabled)
+        item {
+            Button(
+                onClick = {
+                    settingsViewModel.updateOpenAiKey(openAiKey)
+                    scope.launch {
+                        val status = withContext(Dispatchers.IO) {
+                            LlmConfigClient().pushConfig(settings)
+                        }.fold(
+                            onSuccess = { "sent to server" },
+                            onFailure = { "failed to send" },
+                        )
+                        llmStatus = status
                     }
                 },
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(text = "Speak responses")
-            Switch(
-                checked = settings.speakResponses,
-                onCheckedChange = { enabled ->
-                    settingsViewModel.updateSpeakResponses(enabled)
-                },
-            )
-        }
-        if (settings.speakResponses) {
-            ExposedDropdownMenuBox(
-                expanded = voiceMenuOpen,
-                onExpandedChange = { voiceMenuOpen = !voiceMenuOpen },
             ) {
-                OutlinedTextField(
-                    value = if (settings.ttsVoiceName.isBlank()) "System default" else settings.ttsVoiceName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Voice") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = voiceMenuOpen) },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
+                Text(text = "Save OpenAI key")
+            }
+        }
+        item {
+            if (!llmStatus.isNullOrBlank()) {
+                Text(text = "LLM config: $llmStatus", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text(text = "Include last known location")
+                    if (!hasLocationPermission && settings.includeLocation) {
+                        Text(text = "Location permission required")
+                    }
+                }
+                Switch(
+                    checked = settings.includeLocation,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasLocationPermission) {
+                            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        } else {
+                            settingsViewModel.updateIncludeLocation(enabled)
+                        }
+                    },
                 )
-                ExposedDropdownMenu(
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(text = "Speak responses")
+                Switch(
+                    checked = settings.speakResponses,
+                    onCheckedChange = { enabled ->
+                        settingsViewModel.updateSpeakResponses(enabled)
+                    },
+                )
+            }
+        }
+        item {
+            if (settings.speakResponses) {
+                ExposedDropdownMenuBox(
                     expanded = voiceMenuOpen,
-                    onDismissRequest = { voiceMenuOpen = false },
+                    onExpandedChange = { voiceMenuOpen = !voiceMenuOpen },
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("System default") },
-                        onClick = {
-                            settingsViewModel.updateTtsVoiceName("")
-                            voiceMenuOpen = false
-                        },
+                    OutlinedTextField(
+                        value = if (settings.ttsVoiceName.isBlank()) "System default" else settings.ttsVoiceName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Voice") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = voiceMenuOpen) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
                     )
-                    voiceOptions.forEach { voice ->
+                    ExposedDropdownMenu(
+                        expanded = voiceMenuOpen,
+                        onDismissRequest = { voiceMenuOpen = false },
+                    ) {
                         DropdownMenuItem(
-                            text = { Text(voice) },
+                            text = { Text("System default") },
                             onClick = {
-                                settingsViewModel.updateTtsVoiceName(voice)
+                                settingsViewModel.updateTtsVoiceName("")
                                 voiceMenuOpen = false
                             },
                         )
-                    }
-                }
-            }
-        }
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(),
-        ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Assistant", style = MaterialTheme.typography.titleSmall)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column {
-                        Text(text = "Enable assistant")
-                        if (!hasNotificationPermission) {
-                            Text(text = "Notification permission required")
-                        }
-                    }
-                    Switch(
-                        checked = settings.assistantEnabled,
-                        onCheckedChange = { enabled ->
-                            if (enabled && !hasNotificationPermission) {
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                settingsViewModel.updateAssistantEnabled(enabled)
-                            }
-                        },
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column {
-                        Text(text = "Ingest notifications")
-                        if (!notificationListenerEnabled) {
-                            Text(text = "Enable notification access in system settings")
-                        }
-                    }
-                    Switch(
-                        checked = settings.assistantIncludeNotifications,
-                        onCheckedChange = { enabled ->
-                            settingsViewModel.updateAssistantIncludeNotifications(enabled)
-                        },
-                    )
-                }
-                if (!notificationListenerEnabled) {
-                    TextButton(
-                        onClick = {
-                            context.startActivity(
-                                Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
-                            )
-                        },
-                    ) {
-                        Text(text = "Open notification access settings")
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(text = "Ingest system triggers")
-                    Switch(
-                        checked = settings.assistantIncludeTriggers,
-                        onCheckedChange = { enabled ->
-                            settingsViewModel.updateAssistantIncludeTriggers(enabled)
-                        },
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(text = "Start on boot")
-                    Switch(
-                        checked = settings.assistantStartOnBoot,
-                        onCheckedChange = { enabled ->
-                            settingsViewModel.updateAssistantStartOnBoot(enabled)
-                        },
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column {
-                        Text(text = "Accessibility bridge")
-                        if (!accessibilityEnabled) {
-                            Text(text = "Enable accessibility in system settings")
-                        }
-                    }
-                    Switch(
-                        checked = settings.assistantAccessibilityEnabled,
-                        onCheckedChange = { enabled ->
-                            settingsViewModel.updateAssistantAccessibilityEnabled(enabled)
-                        },
-                    )
-                }
-                if (!accessibilityEnabled) {
-                    TextButton(
-                        onClick = {
-                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        },
-                    ) {
-                        Text(text = "Open accessibility settings")
-                    }
-                }
-            }
-        }
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(),
-        ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = "Preferences", style = MaterialTheme.typography.titleSmall)
-                OutlinedTextField(
-                    value = quietHours,
-                    onValueChange = { quietHours = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Quiet hours (HH:MM-HH:MM)") },
-                    singleLine = true,
-                )
-                ExposedDropdownMenuBox(
-                    expanded = daysMenuOpen,
-                    onExpandedChange = { daysMenuOpen = !daysMenuOpen },
-                ) {
-                    OutlinedTextField(
-                        value = quietDays,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Quiet hours days") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = daysMenuOpen) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = daysMenuOpen,
-                        onDismissRequest = { daysMenuOpen = false },
-                    ) {
-                        listOf("weekdays", "weekends", "daily").forEach { option ->
+                        voiceOptions.forEach { voice ->
                             DropdownMenuItem(
-                                text = { Text(option) },
+                                text = { Text(voice) },
                                 onClick = {
-                                    quietDays = option
-                                    daysMenuOpen = false
+                                    settingsViewModel.updateTtsVoiceName(voice)
+                                    voiceMenuOpen = false
                                 },
                             )
                         }
                     }
                 }
-                Button(
-                    onClick = {
-                        settingsViewModel.updateQuietHours(quietHours)
-                        settingsViewModel.updateQuietHoursDays(quietDays)
-                        ingestViewModel.sendPreferenceCommand(
-                            "set quiet hours $quietHours $quietDays",
-                        )
-                    },
-                ) {
-                    Text(text = "Apply quiet hours")
-                }
-                ExposedDropdownMenuBox(
-                    expanded = styleMenuOpen,
-                    onExpandedChange = { styleMenuOpen = !styleMenuOpen },
-                ) {
-                    OutlinedTextField(
-                        value = notificationStyle,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Notification style") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = styleMenuOpen) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                    )
-                    ExposedDropdownMenu(
-                        expanded = styleMenuOpen,
-                        onDismissRequest = { styleMenuOpen = false },
-                    ) {
-                        listOf("brief", "normal", "detailed").forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    notificationStyle = option
-                                    styleMenuOpen = false
-                                },
-                            )
-                        }
-                    }
-                }
-                Button(
-                    onClick = {
-                        settingsViewModel.updateNotificationStyle(notificationStyle)
-                        ingestViewModel.sendPreferenceCommand(
-                            "set notification style $notificationStyle",
-                        )
-                    },
-                ) {
-                    Text(text = "Apply notification style")
-                }
-                if (!ingestViewModel.preferenceStatus.isNullOrBlank()) {
-                    Text(
-                        text = ingestViewModel.preferenceStatus ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
             }
         }
-        if (!hasLocationPermission) {
-            TextButton(
-                onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(),
             ) {
-                Text(text = "Request location permission")
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Assistant", style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text(text = "Enable assistant")
+                            if (!hasNotificationPermission) {
+                                Text(text = "Notification permission required")
+                            }
+                        }
+                        Switch(
+                            checked = settings.assistantEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && !hasNotificationPermission) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                } else {
+                                    settingsViewModel.updateAssistantEnabled(enabled)
+                                }
+                            },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text(text = "Ingest notifications")
+                            if (!notificationListenerEnabled) {
+                                Text(text = "Enable notification access in system settings")
+                            }
+                        }
+                        Switch(
+                            checked = settings.assistantIncludeNotifications,
+                            onCheckedChange = { enabled ->
+                                settingsViewModel.updateAssistantIncludeNotifications(enabled)
+                            },
+                        )
+                    }
+                    if (!notificationListenerEnabled) {
+                        TextButton(
+                            onClick = {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
+                                )
+                            },
+                        ) {
+                            Text(text = "Open notification access settings")
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(text = "Ingest system triggers")
+                        Switch(
+                            checked = settings.assistantIncludeTriggers,
+                            onCheckedChange = { enabled ->
+                                settingsViewModel.updateAssistantIncludeTriggers(enabled)
+                            },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(text = "Start on boot")
+                        Switch(
+                            checked = settings.assistantStartOnBoot,
+                            onCheckedChange = { enabled ->
+                                settingsViewModel.updateAssistantStartOnBoot(enabled)
+                            },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text(text = "Accessibility bridge")
+                            if (!accessibilityEnabled) {
+                                Text(text = "Enable accessibility in system settings")
+                            }
+                        }
+                        Switch(
+                            checked = settings.assistantAccessibilityEnabled,
+                            onCheckedChange = { enabled ->
+                                settingsViewModel.updateAssistantAccessibilityEnabled(enabled)
+                            },
+                        )
+                    }
+                    if (!accessibilityEnabled) {
+                        TextButton(
+                            onClick = {
+                                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            },
+                        ) {
+                            Text(text = "Open accessibility settings")
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(),
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Preferences", style = MaterialTheme.typography.titleSmall)
+                    OutlinedTextField(
+                        value = quietHours,
+                        onValueChange = { quietHours = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Quiet hours (HH:MM-HH:MM)") },
+                        singleLine = true,
+                    )
+                    ExposedDropdownMenuBox(
+                        expanded = daysMenuOpen,
+                        onExpandedChange = { daysMenuOpen = !daysMenuOpen },
+                    ) {
+                        OutlinedTextField(
+                            value = quietDays,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Quiet hours days") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = daysMenuOpen) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = daysMenuOpen,
+                            onDismissRequest = { daysMenuOpen = false },
+                        ) {
+                            listOf("weekdays", "weekends", "daily").forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        quietDays = option
+                                        daysMenuOpen = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            settingsViewModel.updateQuietHours(quietHours)
+                            settingsViewModel.updateQuietHoursDays(quietDays)
+                            ingestViewModel.sendPreferenceCommand(
+                                "set quiet hours $quietHours $quietDays",
+                            )
+                        },
+                    ) {
+                        Text(text = "Apply quiet hours")
+                    }
+                    ExposedDropdownMenuBox(
+                        expanded = styleMenuOpen,
+                        onExpandedChange = { styleMenuOpen = !styleMenuOpen },
+                    ) {
+                        OutlinedTextField(
+                            value = notificationStyle,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Notification style") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = styleMenuOpen) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = styleMenuOpen,
+                            onDismissRequest = { styleMenuOpen = false },
+                        ) {
+                            listOf("brief", "normal", "detailed").forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        notificationStyle = option
+                                        styleMenuOpen = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            settingsViewModel.updateNotificationStyle(notificationStyle)
+                            ingestViewModel.sendPreferenceCommand(
+                                "set notification style $notificationStyle",
+                            )
+                        },
+                    ) {
+                        Text(text = "Apply notification style")
+                    }
+                    if (!ingestViewModel.preferenceStatus.isNullOrBlank()) {
+                        Text(
+                            text = ingestViewModel.preferenceStatus ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+        }
+        item {
+            if (!hasLocationPermission) {
+                TextButton(
+                    onClick = { permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+                ) {
+                    Text(text = "Request location permission")
+                }
             }
         }
     }
