@@ -18,12 +18,14 @@ import kotlinx.coroutines.launch
 
 class AssistantService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val reporter by lazy { AssistantEventReporter(applicationContext) }
-    private val triggerReceiver = AssistantTriggerReceiver(reporter)
+    private lateinit var reporter: AssistantEventReporter
+    private lateinit var triggerReceiver: AssistantTriggerReceiver
     private var isRunning = false
 
     override fun onCreate() {
         super.onCreate()
+        reporter = AssistantEventReporter(this)
+        triggerReceiver = AssistantTriggerReceiver(reporter)
         createNotificationChannel()
         registerTriggers()
     }
@@ -46,7 +48,7 @@ class AssistantService : Service() {
     }
 
     override fun onDestroy() {
-        unregisterReceiver(triggerReceiver)
+        runCatching { unregisterReceiver(triggerReceiver) }
         if (isRunning) {
             scope.launch { reporter.reportEvent("assistant_stopped") }
         }
