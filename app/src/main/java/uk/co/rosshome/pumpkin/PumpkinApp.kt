@@ -13,6 +13,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +35,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,8 +71,8 @@ import kotlinx.serialization.json.contentOrNull
 import uk.co.rosshome.pumpkin.BuildConfig
 
 private enum class Screen(val label: String) {
-    HOME("Home"),
-    PTT("Push"),
+    HOME("Status"),
+    PTT("Assistant"),
     PROPOSALS("Proposals"),
     IMPROVEMENTS("Improvements"),
     SETTINGS("Settings"),
@@ -87,7 +90,7 @@ fun PumpkinApp(
     assistantTrigger: Long,
 ) {
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
-    var screen by remember { mutableStateOf(Screen.HOME) }
+    var screen by remember { mutableStateOf(Screen.PTT) }
     var pttAutoListenKey by remember { mutableStateOf(0L) }
     val context = LocalContext.current
     val hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -116,10 +119,18 @@ fun PumpkinApp(
     }
 
     PumpkinTheme {
+        val tabs = listOf(
+            Screen.PTT,
+            Screen.HOME,
+            Screen.PROPOSALS,
+            Screen.IMPROVEMENTS,
+            Screen.SETTINGS,
+            Screen.DEBUG,
+        )
         Scaffold(
             bottomBar = {
                 NavigationBar {
-                    Screen.values().forEach { item ->
+                    tabs.forEach { item ->
                         NavigationBarItem(
                             selected = screen == item,
                             onClick = { screen = item },
@@ -198,7 +209,7 @@ private fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "Pumpkin", style = MaterialTheme.typography.headlineMedium)
+            Text(text = "Status", style = MaterialTheme.typography.headlineMedium)
             Button(onClick = { homeViewModel.refresh() }, enabled = !isLoading) {
                 Text(text = if (isLoading) "Refreshing..." else "Refresh")
             }
@@ -241,7 +252,7 @@ private fun HomeScreen(
         InventoryCard(summary = summary)
         LogCard(errors = errors, summary = summary)
         Text(
-            text = "Use Push to send text to /ingest. Use Settings to configure server and key.",
+            text = "Use Assistant to talk or type. Settings controls server and key.",
             style = MaterialTheme.typography.bodyMedium,
         )
     }
@@ -364,55 +375,95 @@ private fun PushToTalkScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(padding)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(text = "Push-to-talk", style = MaterialTheme.typography.headlineSmall)
-        OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Text to send") },
-            minLines = 3,
-        )
-        Button(
-            onClick = {
-                ingestViewModel.sendText(text)
-                text = ""
-            },
-            enabled = text.isNotBlank() && !ingestViewModel.isSending,
-        ) {
-            Text(text = if (ingestViewModel.isSending) "Sending..." else "Send")
-        }
-        Button(
-            onClick = {
-                if (isListening) {
-                    recognizer?.stopListening()
-                    isListening = false
-                    speechStatus = "Stopped"
-                } else {
-                    startListening()
-                }
-            },
-            enabled = !ingestViewModel.isSending,
-        ) {
-            Text(text = if (isListening) "Stop listening" else "Start listening")
-        }
-        if (speechStatus.isNotBlank()) {
-            Text(text = speechStatus, style = MaterialTheme.typography.bodySmall)
-        }
-        ResponseSummary(ingestViewModel = ingestViewModel)
-        Text(text = "Recent responses", style = MaterialTheme.typography.titleSmall)
-        LazyColumn(
+        Surface(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
         ) {
-            items(logs) { entry ->
-                ResponseLogCard(entry)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(text = "Assistant", style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        text = "Speak or type. Pumpkin will respond here.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(20.dp),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        val statusText = if (speechStatus.isNotBlank()) speechStatus else "Ready"
+                        Text(text = statusText, style = MaterialTheme.typography.titleSmall)
+                        Button(
+                            onClick = {
+                                if (isListening) {
+                                    recognizer?.stopListening()
+                                    isListening = false
+                                    speechStatus = "Stopped"
+                                } else {
+                                    startListening()
+                                }
+                            },
+                            enabled = !ingestViewModel.isSending,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(18.dp),
+                        ) {
+                            Text(text = if (isListening) "Stop listening" else "Start listening")
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Type a message") },
+                    minLines = 3,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Button(
+                        onClick = {
+                            ingestViewModel.sendText(text)
+                            text = ""
+                        },
+                        enabled = text.isNotBlank() && !ingestViewModel.isSending,
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
+                        Text(text = if (ingestViewModel.isSending) "Sending..." else "Send")
+                    }
+                }
+                ResponseSummary(ingestViewModel = ingestViewModel)
+                Text(text = "Recent responses", style = MaterialTheme.typography.titleSmall)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(logs) { entry ->
+                        ResponseLogCard(entry)
+                    }
+                }
             }
         }
     }
