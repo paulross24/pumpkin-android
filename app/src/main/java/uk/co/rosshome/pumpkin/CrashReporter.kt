@@ -10,6 +10,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 class CrashReporter(context: Context) {
+    private val appContext = context.applicationContext
     private val settingsRepository = SettingsRepository(context)
     private val client = OkHttpClient()
     private val store = CrashReportStore(context)
@@ -37,7 +38,9 @@ class CrashReporter(context: Context) {
         payload.put("app", "Pumpkin Android")
         payload.put("fatal", fatal)
 
-        store.save(payload.toString())
+        val payloadText = payload.toString()
+        store.save(payloadText)
+        CrashFileWriter.write(appContext, payloadText)
 
         val request = Request.Builder()
             .url(settings.serverUrl + "/errors")
