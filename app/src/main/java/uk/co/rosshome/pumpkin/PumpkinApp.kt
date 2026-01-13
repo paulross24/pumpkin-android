@@ -102,11 +102,7 @@ fun PumpkinApp(
         updateViewModel.check()
     }
     LaunchedEffect(settings.assistantEnabled, hasNotificationPermission) {
-        if (settings.assistantEnabled && hasNotificationPermission) {
-            AssistantServiceController.start(context)
-        } else {
-            AssistantServiceController.stop(context)
-        }
+        AssistantServiceController.stop(context)
     }
 
     PumpkinTheme {
