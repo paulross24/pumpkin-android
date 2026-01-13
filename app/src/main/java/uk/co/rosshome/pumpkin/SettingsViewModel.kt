@@ -22,6 +22,11 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             quietHours = "21:00-06:00",
             quietHoursDays = "weekdays",
             notificationStyle = "brief",
+            assistantEnabled = false,
+            assistantIncludeNotifications = true,
+            assistantIncludeTriggers = true,
+            assistantStartOnBoot = false,
+            assistantAccessibilityEnabled = false,
         ),
     )
 
@@ -76,6 +81,36 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateNotificationStyle(value: String) {
         viewModelScope.launch {
             repository.updateNotificationStyle(value)
+        }
+    }
+
+    fun updateAssistantEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateAssistantEnabled(enabled)
+        }
+    }
+
+    fun updateAssistantIncludeNotifications(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateAssistantIncludeNotifications(enabled)
+        }
+    }
+
+    fun updateAssistantIncludeTriggers(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateAssistantIncludeTriggers(enabled)
+        }
+    }
+
+    fun updateAssistantStartOnBoot(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateAssistantStartOnBoot(enabled)
+        }
+    }
+
+    fun updateAssistantAccessibilityEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateAssistantAccessibilityEnabled(enabled)
         }
     }
 }

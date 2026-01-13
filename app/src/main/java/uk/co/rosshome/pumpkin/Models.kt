@@ -244,4 +244,9 @@ data class SettingsState(
     val quietHours: String,
     val quietHoursDays: String,
     val notificationStyle: String,
+    val assistantEnabled: Boolean,
+    val assistantIncludeNotifications: Boolean,
+    val assistantIncludeTriggers: Boolean,
+    val assistantStartOnBoot: Boolean,
+    val assistantAccessibilityEnabled: Boolean,
 )

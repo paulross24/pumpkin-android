@@ -4,10 +4,12 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -90,6 +92,13 @@ fun PumpkinApp(
             CrashUploader(context).uploadIfPresent()
         }
         updateViewModel.check()
+    }
+    LaunchedEffect(settings.assistantEnabled) {
+        if (settings.assistantEnabled) {
+            AssistantServiceController.start(context)
+        } else {
+            AssistantServiceController.stop(context)
+        }
     }
 
     PumpkinTheme {
@@ -603,6 +612,16 @@ private fun SettingsScreen(
         context,
         Manifest.permission.ACCESS_FINE_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
+    val hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
+    val notificationListenerEnabled = AssistantStatus.isNotificationListenerEnabled(context)
+    val accessibilityEnabled = AssistantStatus.isAccessibilityServiceEnabled(context)
 
     var serverUrl by remember(settings.serverUrl) { mutableStateOf(settings.serverUrl) }
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
@@ -621,6 +640,11 @@ private fun SettingsScreen(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         settingsViewModel.updateIncludeLocation(granted)
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { _ ->
+        // Update happens on toggle; we only request permission here.
     }
 
     Column(
@@ -748,6 +772,117 @@ private fun SettingsScreen(
                                 voiceMenuOpen = false
                             },
                         )
+                    }
+                }
+            }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(),
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Assistant", style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column {
+                        Text(text = "Enable assistant")
+                        if (!hasNotificationPermission) {
+                            Text(text = "Notification permission required")
+                        }
+                    }
+                    Switch(
+                        checked = settings.assistantEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled && !hasNotificationPermission) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                            settingsViewModel.updateAssistantEnabled(enabled)
+                        },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column {
+                        Text(text = "Ingest notifications")
+                        if (!notificationListenerEnabled) {
+                            Text(text = "Enable notification access in system settings")
+                        }
+                    }
+                    Switch(
+                        checked = settings.assistantIncludeNotifications,
+                        onCheckedChange = { enabled ->
+                            settingsViewModel.updateAssistantIncludeNotifications(enabled)
+                        },
+                    )
+                }
+                if (!notificationListenerEnabled) {
+                    TextButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
+                            )
+                        },
+                    ) {
+                        Text(text = "Open notification access settings")
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(text = "Ingest system triggers")
+                    Switch(
+                        checked = settings.assistantIncludeTriggers,
+                        onCheckedChange = { enabled ->
+                            settingsViewModel.updateAssistantIncludeTriggers(enabled)
+                        },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(text = "Start on boot")
+                    Switch(
+                        checked = settings.assistantStartOnBoot,
+                        onCheckedChange = { enabled ->
+                            settingsViewModel.updateAssistantStartOnBoot(enabled)
+                        },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column {
+                        Text(text = "Accessibility bridge")
+                        if (!accessibilityEnabled) {
+                            Text(text = "Enable accessibility in system settings")
+                        }
+                    }
+                    Switch(
+                        checked = settings.assistantAccessibilityEnabled,
+                        onCheckedChange = { enabled ->
+                            settingsViewModel.updateAssistantAccessibilityEnabled(enabled)
+                        },
+                    )
+                }
+                if (!accessibilityEnabled) {
+                    TextButton(
+                        onClick = {
+                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        },
+                    ) {
+                        Text(text = "Open accessibility settings")
                     }
                 }
             }

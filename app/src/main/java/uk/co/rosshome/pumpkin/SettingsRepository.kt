@@ -70,6 +70,31 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateAssistantEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ASSISTANT_ENABLED, enabled).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateAssistantIncludeNotifications(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ASSISTANT_NOTIFICATIONS, enabled).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateAssistantIncludeTriggers(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ASSISTANT_TRIGGERS, enabled).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateAssistantStartOnBoot(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ASSISTANT_BOOT, enabled).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateAssistantAccessibilityEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ASSISTANT_ACCESSIBILITY, enabled).apply()
+        _settings.value = loadState()
+    }
+
     private fun loadState(): SettingsState {
         return SettingsState(
             serverUrl = normalizeServerUrl(
@@ -83,6 +108,11 @@ class SettingsRepository(context: Context) {
             quietHours = prefs.getString(KEY_QUIET_HOURS, "21:00-06:00") ?: "21:00-06:00",
             quietHoursDays = prefs.getString(KEY_QUIET_HOURS_DAYS, "weekdays") ?: "weekdays",
             notificationStyle = prefs.getString(KEY_NOTIFICATION_STYLE, "brief") ?: "brief",
+            assistantEnabled = prefs.getBoolean(KEY_ASSISTANT_ENABLED, false),
+            assistantIncludeNotifications = prefs.getBoolean(KEY_ASSISTANT_NOTIFICATIONS, true),
+            assistantIncludeTriggers = prefs.getBoolean(KEY_ASSISTANT_TRIGGERS, true),
+            assistantStartOnBoot = prefs.getBoolean(KEY_ASSISTANT_BOOT, false),
+            assistantAccessibilityEnabled = prefs.getBoolean(KEY_ASSISTANT_ACCESSIBILITY, false),
         )
     }
 
@@ -100,6 +130,11 @@ class SettingsRepository(context: Context) {
         private const val KEY_QUIET_HOURS = "quiet_hours"
         private const val KEY_QUIET_HOURS_DAYS = "quiet_hours_days"
         private const val KEY_NOTIFICATION_STYLE = "notification_style"
+        private const val KEY_ASSISTANT_ENABLED = "assistant_enabled"
+        private const val KEY_ASSISTANT_NOTIFICATIONS = "assistant_notifications"
+        private const val KEY_ASSISTANT_TRIGGERS = "assistant_triggers"
+        private const val KEY_ASSISTANT_BOOT = "assistant_boot"
+        private const val KEY_ASSISTANT_ACCESSIBILITY = "assistant_accessibility"
         private val trackedKeys = setOf(
             KEY_SERVER_URL,
             KEY_API_KEY,
@@ -110,6 +145,11 @@ class SettingsRepository(context: Context) {
             KEY_QUIET_HOURS,
             KEY_QUIET_HOURS_DAYS,
             KEY_NOTIFICATION_STYLE,
+            KEY_ASSISTANT_ENABLED,
+            KEY_ASSISTANT_NOTIFICATIONS,
+            KEY_ASSISTANT_TRIGGERS,
+            KEY_ASSISTANT_BOOT,
+            KEY_ASSISTANT_ACCESSIBILITY,
         )
 
         const val DEFAULT_SERVER_URL = "https://pumpkin.rosshome.co.uk"

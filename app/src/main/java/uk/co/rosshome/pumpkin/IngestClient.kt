@@ -23,10 +23,11 @@ class IngestClient(
         settings: SettingsState,
         deviceId: String,
         location: LocationPayload?,
+        source: String = "android",
     ): IngestLogEntry {
         val payload = IngestRequest(
             text = text,
-            source = "android",
+            source = source,
             device = deviceId,
             ts = Instant.now().toString(),
             location = location,
