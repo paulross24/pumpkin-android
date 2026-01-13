@@ -642,6 +642,8 @@ private fun SettingsScreen(
     val voiceOptions = ingestViewModel.availableVoices
     val scope = rememberCoroutineScope()
     var llmStatus by remember { mutableStateOf<String?>(null) }
+    var mediaStatus by remember { mutableStateOf<String?>(null) }
+    val mediaHelper = remember { MediaControlHelper(context.applicationContext) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -907,6 +909,66 @@ private fun SettingsScreen(
                         ) {
                             Text(text = "Open accessibility settings")
                         }
+                    }
+                }
+            }
+        }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(),
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Music", style = MaterialTheme.typography.titleSmall)
+                    Text(text = "Amazon Music")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(
+                            onClick = {
+                                mediaStatus = if (AmazonMusicLauncher.open(context)) {
+                                    "Opened Amazon Music"
+                                } else {
+                                    "Amazon Music not installed"
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(text = "Open app")
+                        }
+                        Button(
+                            onClick = { mediaStatus = mediaHelper.playPause() },
+                            enabled = notificationListenerEnabled,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(text = "Play/Pause")
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(
+                            onClick = { mediaStatus = mediaHelper.previous() },
+                            enabled = notificationListenerEnabled,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(text = "Prev")
+                        }
+                        Button(
+                            onClick = { mediaStatus = mediaHelper.next() },
+                            enabled = notificationListenerEnabled,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(text = "Next")
+                        }
+                    }
+                    if (!notificationListenerEnabled) {
+                        Text(text = "Enable notification access to control playback.")
+                    }
+                    if (!mediaStatus.isNullOrBlank()) {
+                        Text(text = mediaStatus ?: "", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
