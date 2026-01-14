@@ -27,6 +27,15 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             assistantIncludeTriggers = true,
             assistantStartOnBoot = false,
             assistantAccessibilityEnabled = false,
+            carTelemetryEnabled = false,
+            carTelemetrySampleSeconds = 10,
+            carTelemetrySyncMinutes = 30,
+            carObdDeviceName = "",
+            carObdDeviceAddress = "",
+            carMake = "",
+            carModel = "",
+            carYear = "",
+            carTrim = "",
         ),
     )
 
@@ -111,6 +120,60 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateAssistantAccessibilityEnabled(enabled: Boolean) {
         viewModelScope.launch {
             repository.updateAssistantAccessibilityEnabled(enabled)
+        }
+    }
+
+    fun updateCarTelemetryEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateCarTelemetryEnabled(enabled)
+        }
+    }
+
+    fun updateCarTelemetrySampleSeconds(value: Int) {
+        viewModelScope.launch {
+            repository.updateCarTelemetrySampleSeconds(value)
+        }
+    }
+
+    fun updateCarTelemetrySyncMinutes(value: Int) {
+        viewModelScope.launch {
+            repository.updateCarTelemetrySyncMinutes(value)
+        }
+    }
+
+    fun updateCarObdDeviceName(value: String) {
+        viewModelScope.launch {
+            repository.updateCarObdDeviceName(value)
+        }
+    }
+
+    fun updateCarObdDeviceAddress(value: String) {
+        viewModelScope.launch {
+            repository.updateCarObdDeviceAddress(value)
+        }
+    }
+
+    fun updateCarMake(value: String) {
+        viewModelScope.launch {
+            repository.updateCarMake(value)
+        }
+    }
+
+    fun updateCarModel(value: String) {
+        viewModelScope.launch {
+            repository.updateCarModel(value)
+        }
+    }
+
+    fun updateCarYear(value: String) {
+        viewModelScope.launch {
+            repository.updateCarYear(value)
+        }
+    }
+
+    fun updateCarTrim(value: String) {
+        viewModelScope.launch {
+            repository.updateCarTrim(value)
         }
     }
 }

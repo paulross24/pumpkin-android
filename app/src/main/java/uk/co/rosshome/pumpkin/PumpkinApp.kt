@@ -101,6 +101,14 @@ fun PumpkinApp(
     } else {
         true
     }
+    val hasBluetoothPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -108,8 +116,13 @@ fun PumpkinApp(
         }
         updateViewModel.check()
     }
-    LaunchedEffect(settings.assistantEnabled, hasNotificationPermission) {
-        AssistantServiceController.stop(context)
+    LaunchedEffect(settings.assistantEnabled, settings.carTelemetryEnabled, hasNotificationPermission) {
+        val shouldRun = (settings.assistantEnabled && hasNotificationPermission) || settings.carTelemetryEnabled
+        if (shouldRun) {
+            AssistantServiceController.start(context)
+        } else {
+            AssistantServiceController.stop(context)
+        }
     }
     LaunchedEffect(assistantTrigger) {
         if (assistantTrigger != 0L) {
@@ -710,6 +723,20 @@ private fun SettingsScreen(
     var quietHours by remember(settings.quietHours) { mutableStateOf(settings.quietHours) }
     var quietDays by remember(settings.quietHoursDays) { mutableStateOf(settings.quietHoursDays) }
     var notificationStyle by remember(settings.notificationStyle) { mutableStateOf(settings.notificationStyle) }
+    var carSampleSeconds by remember(settings.carTelemetrySampleSeconds) {
+        mutableStateOf(settings.carTelemetrySampleSeconds.toString())
+    }
+    var carSyncMinutes by remember(settings.carTelemetrySyncMinutes) {
+        mutableStateOf(settings.carTelemetrySyncMinutes.toString())
+    }
+    var carObdName by remember(settings.carObdDeviceName) { mutableStateOf(settings.carObdDeviceName) }
+    var carObdAddress by remember(settings.carObdDeviceAddress) {
+        mutableStateOf(settings.carObdDeviceAddress)
+    }
+    var carMake by remember(settings.carMake) { mutableStateOf(settings.carMake) }
+    var carModel by remember(settings.carModel) { mutableStateOf(settings.carModel) }
+    var carYear by remember(settings.carYear) { mutableStateOf(settings.carYear) }
+    var carTrim by remember(settings.carTrim) { mutableStateOf(settings.carTrim) }
     var voiceMenuOpen by remember { mutableStateOf(false) }
     var daysMenuOpen by remember { mutableStateOf(false) }
     var styleMenuOpen by remember { mutableStateOf(false) }
@@ -723,6 +750,14 @@ private fun SettingsScreen(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         settingsViewModel.updateIncludeLocation(granted)
+    }
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            settingsViewModel.updateCarTelemetryEnabled(true)
+            AssistantServiceController.start(context)
+        }
     }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -1043,6 +1078,113 @@ private fun SettingsScreen(
                     }
                     if (!mediaStatus.isNullOrBlank()) {
                         Text(text = mediaStatus ?: "", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(),
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Car telemetry", style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text(text = "Enable OBD telemetry")
+                            if (!hasBluetoothPermission && settings.carTelemetryEnabled) {
+                                Text(text = "Bluetooth permission required")
+                            }
+                        }
+                        Switch(
+                            checked = settings.carTelemetryEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && !hasBluetoothPermission) {
+                                    bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+                                } else {
+                                    settingsViewModel.updateCarTelemetryEnabled(enabled)
+                                    if (enabled) {
+                                        AssistantServiceController.start(context)
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    OutlinedTextField(
+                        value = carObdName,
+                        onValueChange = { carObdName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("OBD device name (optional)") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = carObdAddress,
+                        onValueChange = { carObdAddress = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("OBD device address (optional)") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = carMake,
+                        onValueChange = { carMake = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Car make") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = carModel,
+                        onValueChange = { carModel = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Car model") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = carYear,
+                        onValueChange = { carYear = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Car year") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = carTrim,
+                        onValueChange = { carTrim = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Car trim") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = carSampleSeconds,
+                        onValueChange = { carSampleSeconds = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Sample interval seconds") },
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
+                        value = carSyncMinutes,
+                        onValueChange = { carSyncMinutes = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Sync interval minutes") },
+                        singleLine = true,
+                    )
+                    Button(
+                        onClick = {
+                            val sample = carSampleSeconds.toIntOrNull() ?: 10
+                            val sync = carSyncMinutes.toIntOrNull() ?: 30
+                            settingsViewModel.updateCarObdDeviceName(carObdName)
+                            settingsViewModel.updateCarObdDeviceAddress(carObdAddress)
+                            settingsViewModel.updateCarMake(carMake)
+                            settingsViewModel.updateCarModel(carModel)
+                            settingsViewModel.updateCarYear(carYear)
+                            settingsViewModel.updateCarTrim(carTrim)
+                            settingsViewModel.updateCarTelemetrySampleSeconds(sample)
+                            settingsViewModel.updateCarTelemetrySyncMinutes(sync)
+                        },
+                    ) {
+                        Text(text = "Save car settings")
                     }
                 }
             }

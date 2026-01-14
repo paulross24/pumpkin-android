@@ -20,12 +20,14 @@ class AssistantService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var reporter: AssistantEventReporter
     private lateinit var triggerReceiver: AssistantTriggerReceiver
+    private lateinit var carTelemetryManager: CarTelemetryManager
     private var isRunning = false
 
     override fun onCreate() {
         super.onCreate()
         reporter = AssistantEventReporter(this)
         triggerReceiver = AssistantTriggerReceiver(reporter)
+        carTelemetryManager = CarTelemetryManager(this)
         createNotificationChannel()
         registerTriggers()
     }
@@ -42,6 +44,7 @@ class AssistantService : Service() {
                     isRunning = true
                     scope.launch { reporter.reportEvent("assistant_started") }
                 }
+                carTelemetryManager.start()
             }
         }
         return START_STICKY
@@ -52,6 +55,7 @@ class AssistantService : Service() {
         if (isRunning) {
             scope.launch { reporter.reportEvent("assistant_stopped") }
         }
+        carTelemetryManager.stop()
         scope.cancel()
         super.onDestroy()
     }

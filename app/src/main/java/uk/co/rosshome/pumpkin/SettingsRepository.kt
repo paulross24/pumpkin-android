@@ -95,6 +95,51 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateCarTelemetryEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CAR_TELEMETRY_ENABLED, enabled).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarTelemetrySampleSeconds(value: Int) {
+        prefs.edit().putInt(KEY_CAR_SAMPLE_SECONDS, value).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarTelemetrySyncMinutes(value: Int) {
+        prefs.edit().putInt(KEY_CAR_SYNC_MINUTES, value).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarObdDeviceName(value: String) {
+        prefs.edit().putString(KEY_CAR_OBD_NAME, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarObdDeviceAddress(value: String) {
+        prefs.edit().putString(KEY_CAR_OBD_ADDRESS, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarMake(value: String) {
+        prefs.edit().putString(KEY_CAR_MAKE, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarModel(value: String) {
+        prefs.edit().putString(KEY_CAR_MODEL, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarYear(value: String) {
+        prefs.edit().putString(KEY_CAR_YEAR, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateCarTrim(value: String) {
+        prefs.edit().putString(KEY_CAR_TRIM, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
     private fun loadState(): SettingsState {
         return SettingsState(
             serverUrl = normalizeServerUrl(
@@ -113,6 +158,15 @@ class SettingsRepository(context: Context) {
             assistantIncludeTriggers = prefs.getBoolean(KEY_ASSISTANT_TRIGGERS, true),
             assistantStartOnBoot = prefs.getBoolean(KEY_ASSISTANT_BOOT, false),
             assistantAccessibilityEnabled = prefs.getBoolean(KEY_ASSISTANT_ACCESSIBILITY, false),
+            carTelemetryEnabled = prefs.getBoolean(KEY_CAR_TELEMETRY_ENABLED, false),
+            carTelemetrySampleSeconds = prefs.getInt(KEY_CAR_SAMPLE_SECONDS, 10),
+            carTelemetrySyncMinutes = prefs.getInt(KEY_CAR_SYNC_MINUTES, 30),
+            carObdDeviceName = prefs.getString(KEY_CAR_OBD_NAME, "") ?: "",
+            carObdDeviceAddress = prefs.getString(KEY_CAR_OBD_ADDRESS, "") ?: "",
+            carMake = prefs.getString(KEY_CAR_MAKE, "") ?: "",
+            carModel = prefs.getString(KEY_CAR_MODEL, "") ?: "",
+            carYear = prefs.getString(KEY_CAR_YEAR, "") ?: "",
+            carTrim = prefs.getString(KEY_CAR_TRIM, "") ?: "",
         )
     }
 
@@ -135,6 +189,15 @@ class SettingsRepository(context: Context) {
         private const val KEY_ASSISTANT_TRIGGERS = "assistant_triggers"
         private const val KEY_ASSISTANT_BOOT = "assistant_boot"
         private const val KEY_ASSISTANT_ACCESSIBILITY = "assistant_accessibility"
+        private const val KEY_CAR_TELEMETRY_ENABLED = "car_telemetry_enabled"
+        private const val KEY_CAR_SAMPLE_SECONDS = "car_sample_seconds"
+        private const val KEY_CAR_SYNC_MINUTES = "car_sync_minutes"
+        private const val KEY_CAR_OBD_NAME = "car_obd_name"
+        private const val KEY_CAR_OBD_ADDRESS = "car_obd_address"
+        private const val KEY_CAR_MAKE = "car_make"
+        private const val KEY_CAR_MODEL = "car_model"
+        private const val KEY_CAR_YEAR = "car_year"
+        private const val KEY_CAR_TRIM = "car_trim"
         private val trackedKeys = setOf(
             KEY_SERVER_URL,
             KEY_API_KEY,
@@ -150,6 +213,15 @@ class SettingsRepository(context: Context) {
             KEY_ASSISTANT_TRIGGERS,
             KEY_ASSISTANT_BOOT,
             KEY_ASSISTANT_ACCESSIBILITY,
+            KEY_CAR_TELEMETRY_ENABLED,
+            KEY_CAR_SAMPLE_SECONDS,
+            KEY_CAR_SYNC_MINUTES,
+            KEY_CAR_OBD_NAME,
+            KEY_CAR_OBD_ADDRESS,
+            KEY_CAR_MAKE,
+            KEY_CAR_MODEL,
+            KEY_CAR_YEAR,
+            KEY_CAR_TRIM,
         )
 
         const val DEFAULT_SERVER_URL = "https://pumpkin.rosshome.co.uk"

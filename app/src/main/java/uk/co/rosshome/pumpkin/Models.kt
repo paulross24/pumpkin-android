@@ -290,4 +290,27 @@ data class SettingsState(
     val assistantIncludeTriggers: Boolean,
     val assistantStartOnBoot: Boolean,
     val assistantAccessibilityEnabled: Boolean,
+    val carTelemetryEnabled: Boolean,
+    val carTelemetrySampleSeconds: Int,
+    val carTelemetrySyncMinutes: Int,
+    val carObdDeviceName: String,
+    val carObdDeviceAddress: String,
+    val carMake: String,
+    val carModel: String,
+    val carYear: String,
+    val carTrim: String,
+)
+
+@Serializable
+data class CarTelemetryRecord(
+    val ts: String,
+    val device_id: String,
+    val adapter_name: String? = null,
+    val adapter_address: String? = null,
+    val make: String? = null,
+    val model: String? = null,
+    val year: String? = null,
+    val trim: String? = null,
+    val location: LocationPayload? = null,
+    val readings: Map<String, Double> = emptyMap(),
 )
