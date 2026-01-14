@@ -1324,13 +1324,37 @@ private fun NetworkDiscoveryCard(summary: SummaryResponse?) {
                 }
                 else -> {
                     Text(text = "Devices: ${snapshot.device_count}")
+                    if (!snapshot.subnet.isNullOrBlank()) {
+                        Text(text = "Subnet: ${snapshot.subnet}")
+                    }
                     val devices = snapshot.devices.take(6)
                     devices.forEach { device ->
+                        val hints = if (device.hints.isEmpty()) "" else " • ${device.hints.joinToString()}"
                         val ports = if (device.open_ports.isEmpty()) "no ports" else device.open_ports.joinToString()
-                        Text(text = "${device.ip ?: "unknown"} • $ports")
+                        Text(text = "${device.ip ?: "unknown"} • $ports$hints")
+                        device.services.take(2).forEach { service ->
+                            val label = service.type ?: "service"
+                            val detail = listOfNotNull(
+                                service.title?.take(40),
+                                service.server?.take(40),
+                                service.banner?.take(40),
+                                service.status?.take(40),
+                            ).firstOrNull() ?: "active"
+                            Text(text = "  - $label: $detail")
+                        }
                     }
                     if (snapshot.device_count > devices.size) {
                         Text(text = "And ${snapshot.device_count - devices.size} more...")
+                    }
+                    if (snapshot.ssdp.isNotEmpty()) {
+                        Text(text = "SSDP devices: ${snapshot.ssdp.size}")
+                        snapshot.ssdp.take(4).forEach { entry ->
+                            val service = entry.service_type ?: entry.server ?: "ssdp"
+                            Text(text = "  - ${entry.ip ?: "unknown"} • ${service.take(60)}")
+                        }
+                        if (snapshot.ssdp.size > 4) {
+                            Text(text = "  - And ${snapshot.ssdp.size - 4} more...")
+                        }
                     }
                 }
             }

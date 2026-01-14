@@ -174,6 +174,7 @@ data class NetworkDiscoverySnapshot(
     val subnet: String? = null,
     val device_count: Int = 0,
     val devices: List<NetworkDevice> = emptyList(),
+    val ssdp: List<NetworkSsdpEntry> = emptyList(),
 )
 
 @Serializable
@@ -182,6 +183,29 @@ data class NetworkDevice(
     val mac: String? = null,
     val device: String? = null,
     val open_ports: List<Int> = emptyList(),
+    val services: List<NetworkService> = emptyList(),
+    val hints: List<String> = emptyList(),
+)
+
+@Serializable
+data class NetworkService(
+    val type: String? = null,
+    val port: Int? = null,
+    val status: String? = null,
+    val server: String? = null,
+    val title: String? = null,
+    val banner: String? = null,
+)
+
+@Serializable
+data class NetworkSsdpEntry(
+    val ip: String? = null,
+    @SerialName("st") val service_type: String? = null,
+    val usn: String? = null,
+    val server: String? = null,
+    val location: String? = null,
+    @SerialName("cache-control") val cache_control: String? = null,
+    @SerialName("_raw") val raw: String? = null,
 )
 
 @Serializable
