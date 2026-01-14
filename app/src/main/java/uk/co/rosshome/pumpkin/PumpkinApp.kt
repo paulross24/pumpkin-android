@@ -718,6 +718,7 @@ private fun SettingsScreen(
     var serverUrl by remember(settings.serverUrl) { mutableStateOf(settings.serverUrl) }
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
     var openAiKey by remember(settings.openAiKey) { mutableStateOf(settings.openAiKey) }
+    var profileName by remember(settings.profileName) { mutableStateOf(settings.profileName) }
     var quietHours by remember(settings.quietHours) { mutableStateOf(settings.quietHours) }
     var quietDays by remember(settings.quietHoursDays) { mutableStateOf(settings.quietHoursDays) }
     var notificationStyle by remember(settings.notificationStyle) { mutableStateOf(settings.notificationStyle) }
@@ -761,6 +762,16 @@ private fun SettingsScreen(
             )
         }
         item { Button(onClick = { settingsViewModel.updateServerUrl(serverUrl) }) { Text(text = "Save server URL") } }
+        item {
+            OutlinedTextField(
+                value = profileName,
+                onValueChange = { profileName = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Profile name") },
+                singleLine = true,
+            )
+        }
+        item { Button(onClick = { settingsViewModel.updateProfileName(profileName) }) { Text(text = "Save profile name") } }
         item {
             OutlinedTextField(
                 value = apiKey,

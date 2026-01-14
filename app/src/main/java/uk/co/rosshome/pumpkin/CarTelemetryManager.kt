@@ -100,6 +100,7 @@ class CarTelemetryManager(
                     device_id = deviceId,
                     adapter_name = adapterName,
                     adapter_address = adapterAddress,
+                    profile = settings.profileName.ifBlank { null },
                     make = settings.carMake.ifBlank { null },
                     model = settings.carModel.ifBlank { null },
                     year = settings.carYear.ifBlank { null },

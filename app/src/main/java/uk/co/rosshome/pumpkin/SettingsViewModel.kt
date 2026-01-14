@@ -16,6 +16,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             serverUrl = SettingsRepository.DEFAULT_SERVER_URL,
             apiKey = "",
             openAiKey = "",
+            profileName = "",
             includeLocation = false,
             speakResponses = false,
             ttsVoiceName = "",
@@ -54,6 +55,12 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateOpenAiKey(value: String) {
         viewModelScope.launch {
             repository.updateOpenAiKey(value)
+        }
+    }
+
+    fun updateProfileName(value: String) {
+        viewModelScope.launch {
+            repository.updateProfileName(value)
         }
     }
 
