@@ -63,7 +63,7 @@ class CarTelemetryManager(
     }
 
     private suspend fun sampleLoop() {
-        while (isActive) {
+        while (scope.isActive) {
             val settings = settingsRepository.readSettings()
             if (!settings.carTelemetryEnabled) {
                 delay(10_000)
@@ -116,7 +116,7 @@ class CarTelemetryManager(
     }
 
     private suspend fun syncLoop() {
-        while (isActive) {
+        while (scope.isActive) {
             val settings = settingsRepository.readSettings()
             if (!settings.carTelemetryEnabled) {
                 delay(60_000)
