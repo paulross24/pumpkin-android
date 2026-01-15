@@ -8,12 +8,16 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class AssistantService : Service() {
@@ -21,6 +25,9 @@ class AssistantService : Service() {
     private lateinit var reporter: AssistantEventReporter
     private lateinit var triggerReceiver: AssistantTriggerReceiver
     private lateinit var carTelemetryManager: CarTelemetryManager
+    private lateinit var settingsRepository: SettingsRepository
+    private val notificationsClient = NotificationsClient()
+    private var alertJob: Job? = null
     private var isRunning = false
 
     override fun onCreate() {
@@ -28,7 +35,9 @@ class AssistantService : Service() {
         reporter = AssistantEventReporter(this)
         triggerReceiver = AssistantTriggerReceiver(reporter)
         carTelemetryManager = CarTelemetryManager(this)
+        settingsRepository = SettingsRepository(this)
         createNotificationChannel()
+        createAlertNotificationChannel()
         registerTriggers()
     }
 
@@ -45,6 +54,7 @@ class AssistantService : Service() {
                     scope.launch { reporter.reportEvent("assistant_started") }
                 }
                 carTelemetryManager.start()
+                startAlertPolling()
             }
         }
         return START_STICKY
@@ -56,6 +66,7 @@ class AssistantService : Service() {
             scope.launch { reporter.reportEvent("assistant_stopped") }
         }
         carTelemetryManager.stop()
+        alertJob?.cancel()
         scope.cancel()
         super.onDestroy()
     }
@@ -103,10 +114,80 @@ class AssistantService : Service() {
         manager.createNotificationChannel(channel)
     }
 
+    private fun createAlertNotificationChannel() {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            ALERT_CHANNEL_ID,
+            "Pumpkin Alerts",
+            NotificationManager.IMPORTANCE_DEFAULT,
+        )
+        channel.description = "Important alerts from Pumpkin"
+        manager.createNotificationChannel(channel)
+    }
+
+    private fun startAlertPolling() {
+        if (alertJob?.isActive == true) return
+        alertJob = scope.launch {
+            while (isActive) {
+                val settings = settingsRepository.readSettings()
+                if (!settings.assistantEnabled || !settings.assistantIncludeNotifications) {
+                    delay(ALERT_POLL_INTERVAL_MS)
+                    continue
+                }
+                val result = notificationsClient.fetchNotifications(settings, limit = 10)
+                result.getOrNull()?.let { response ->
+                    handleNotifications(settings, response.notifications)
+                }
+                delay(ALERT_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun handleNotifications(settings: SettingsState, notifications: List<NotificationItem>) {
+        if (notifications.isEmpty()) return
+        val prefs = getSharedPreferences(ALERT_PREFS, Context.MODE_PRIVATE)
+        val lastId = prefs.getInt(ALERT_PREF_LAST_ID, 0)
+        val newItems = notifications.filter { it.id > lastId }.sortedBy { it.id }
+        if (newItems.isEmpty()) return
+        newItems.forEach { item ->
+            showAlertNotification(settings, item)
+        }
+        val maxId = newItems.maxOf { it.id }
+        prefs.edit().putInt(ALERT_PREF_LAST_ID, maxId).apply()
+    }
+
+    private fun showAlertNotification(settings: SettingsState, item: NotificationItem) {
+        val url = settings.serverUrl + "/ui/car/alerts"
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        val pending = PendingIntent.getActivity(
+            this,
+            item.id,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val title = "Pumpkin Alert"
+        val text = item.message ?: "Car telemetry alert"
+        val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .build()
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(ALERT_NOTIFICATION_BASE_ID + item.id, notification)
+    }
+
     companion object {
         const val ACTION_START = "uk.co.rosshome.pumpkin.ASSISTANT_START"
         const val ACTION_STOP = "uk.co.rosshome.pumpkin.ASSISTANT_STOP"
         private const val CHANNEL_ID = "pumpkin_assistant"
         private const val NOTIFICATION_ID = 2001
+        private const val ALERT_CHANNEL_ID = "pumpkin_alerts"
+        private const val ALERT_NOTIFICATION_BASE_ID = 40000
+        private const val ALERT_PREFS = "pumpkin_alerts"
+        private const val ALERT_PREF_LAST_ID = "last_alert_id"
+        private const val ALERT_POLL_INTERVAL_MS = 60 * 60 * 1000L
     }
 }

@@ -268,6 +268,22 @@ data class ErrorReport(
     val severity: String? = null,
 )
 
+@Serializable
+data class NotificationItem(
+    val id: Int,
+    val ts: String? = null,
+    val message: String? = null,
+    val concerns: List<String> = emptyList(),
+    val anomalies: List<String> = emptyList(),
+    val report_url: String? = null,
+)
+
+@Serializable
+data class NotificationsResponse(
+    val count: Int,
+    val notifications: List<NotificationItem> = emptyList(),
+)
+
 data class IngestLogEntry(
     val timestamp: String,
     val success: Boolean,
