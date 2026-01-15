@@ -8,7 +8,7 @@ import java.security.SecureRandom
 import java.util.Base64
 
 object HaAuthFlow {
-    const val REDIRECT_URI = "pumpkin-ha://auth"
+    const val REDIRECT_URI = "https://pumpkin.rosshome.co.uk/ha/callback"
 
     fun startLogin(context: Context, settings: SettingsState, repository: SettingsRepository) {
         val verifier = generateVerifier()
