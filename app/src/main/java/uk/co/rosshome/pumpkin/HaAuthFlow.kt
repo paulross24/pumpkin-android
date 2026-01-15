@@ -11,6 +11,7 @@ object HaAuthFlow {
     const val REDIRECT_URI = "https://pumpkin.rosshome.co.uk/ha/callback"
 
     fun startLogin(context: Context, settings: SettingsState, repository: SettingsRepository) {
+        repository.clearHaAuthPending()
         val verifier = generateVerifier()
         val state = generateState()
         repository.setHaAuthPending(state, verifier)

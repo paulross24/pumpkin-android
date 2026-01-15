@@ -112,6 +112,8 @@ class SettingsRepository(context: Context) {
             .remove(KEY_HA_USER_NAME)
             .remove(KEY_HA_USER_ID)
             .remove(KEY_HA_AUTH_ERROR)
+            .remove(KEY_HA_AUTH_STATE)
+            .remove(KEY_HA_CODE_VERIFIER)
             .apply()
         _settings.value = loadState()
     }
