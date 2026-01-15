@@ -31,6 +31,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             carTelemetryEnabled = false,
             carTelemetrySampleSeconds = 10,
             carTelemetrySyncMinutes = 30,
+            alertPollMinutes = 60,
             carObdDeviceName = "",
             carObdDeviceAddress = "",
             carMake = "",
@@ -145,6 +146,12 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateCarTelemetrySyncMinutes(value: Int) {
         viewModelScope.launch {
             repository.updateCarTelemetrySyncMinutes(value)
+        }
+    }
+
+    fun updateAlertPollMinutes(value: Int) {
+        viewModelScope.launch {
+            repository.updateAlertPollMinutes(value)
         }
     }
 

@@ -310,6 +310,7 @@ data class SettingsState(
     val carTelemetryEnabled: Boolean,
     val carTelemetrySampleSeconds: Int,
     val carTelemetrySyncMinutes: Int,
+    val alertPollMinutes: Int,
     val carObdDeviceName: String,
     val carObdDeviceAddress: String,
     val carMake: String,

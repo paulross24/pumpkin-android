@@ -130,15 +130,16 @@ class AssistantService : Service() {
         alertJob = scope.launch {
             while (isActive) {
                 val settings = settingsRepository.readSettings()
+                val pollMinutes = settings.alertPollMinutes.coerceIn(15, 1440)
                 if (!settings.assistantEnabled || !settings.assistantIncludeNotifications) {
-                    delay(ALERT_POLL_INTERVAL_MS)
+                    delay(pollMinutes * 60 * 1000L)
                     continue
                 }
                 val result = notificationsClient.fetchNotifications(settings, limit = 10)
                 result.getOrNull()?.let { response ->
                     handleNotifications(settings, response.notifications)
                 }
-                delay(ALERT_POLL_INTERVAL_MS)
+                delay(pollMinutes * 60 * 1000L)
             }
         }
     }
@@ -188,6 +189,5 @@ class AssistantService : Service() {
         private const val ALERT_NOTIFICATION_BASE_ID = 40000
         private const val ALERT_PREFS = "pumpkin_alerts"
         private const val ALERT_PREF_LAST_ID = "last_alert_id"
-        private const val ALERT_POLL_INTERVAL_MS = 60 * 60 * 1000L
     }
 }

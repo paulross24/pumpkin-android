@@ -1191,6 +1191,8 @@ private fun CarScreen(
     padding: PaddingValues,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val notificationsClient = remember { NotificationsClient() }
     val hasBluetoothPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         ContextCompat.checkSelfPermission(
             context,
@@ -1205,6 +1207,10 @@ private fun CarScreen(
     var carSyncMinutes by remember(settings.carTelemetrySyncMinutes) {
         mutableStateOf(settings.carTelemetrySyncMinutes.toString())
     }
+    var alertPollMinutes by remember(settings.alertPollMinutes) {
+        mutableStateOf(settings.alertPollMinutes.toString())
+    }
+    var alertStatus by remember { mutableStateOf("") }
     var carObdName by remember(settings.carObdDeviceName) { mutableStateOf(settings.carObdDeviceName) }
     var carObdAddress by remember(settings.carObdDeviceAddress) {
         mutableStateOf(settings.carObdDeviceAddress)
@@ -1323,10 +1329,18 @@ private fun CarScreen(
                         label = { Text("Sync interval minutes") },
                         singleLine = true,
                     )
+                    OutlinedTextField(
+                        value = alertPollMinutes,
+                        onValueChange = { alertPollMinutes = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Alert poll interval minutes") },
+                        singleLine = true,
+                    )
                     Button(
                         onClick = {
                             val sample = carSampleSeconds.toIntOrNull() ?: 10
                             val sync = carSyncMinutes.toIntOrNull() ?: 30
+                            val poll = alertPollMinutes.toIntOrNull() ?: 60
                             settingsViewModel.updateCarObdDeviceName(carObdName)
                             settingsViewModel.updateCarObdDeviceAddress(carObdAddress)
                             settingsViewModel.updateCarMake(carMake)
@@ -1335,9 +1349,32 @@ private fun CarScreen(
                             settingsViewModel.updateCarTrim(carTrim)
                             settingsViewModel.updateCarTelemetrySampleSeconds(sample)
                             settingsViewModel.updateCarTelemetrySyncMinutes(sync)
+                            settingsViewModel.updateAlertPollMinutes(poll)
+                            alertStatus = "Saved alert settings."
                         },
                     ) {
                         Text(text = "Save car settings")
+                    }
+                    Button(
+                        onClick = {
+                            alertStatus = "Sending test alert..."
+                            scope.launch {
+                                val result = notificationsClient.sendTestAlert(
+                                    settings,
+                                    "Test alert from Pumpkin app.",
+                                )
+                                alertStatus = if (result.isSuccess) {
+                                    "Test alert sent."
+                                } else {
+                                    "Test alert failed: ${result.exceptionOrNull()?.message ?: "unknown error"}"
+                                }
+                            }
+                        },
+                    ) {
+                        Text(text = "Send test alert")
+                    }
+                    if (alertStatus.isNotBlank()) {
+                        Text(text = alertStatus, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

@@ -115,6 +115,11 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateAlertPollMinutes(value: Int) {
+        prefs.edit().putInt(KEY_ALERT_POLL_MINUTES, value).apply()
+        _settings.value = loadState()
+    }
+
     fun updateCarObdDeviceName(value: String) {
         prefs.edit().putString(KEY_CAR_OBD_NAME, value.trim()).apply()
         _settings.value = loadState()
@@ -167,6 +172,7 @@ class SettingsRepository(context: Context) {
             carTelemetryEnabled = prefs.getBoolean(KEY_CAR_TELEMETRY_ENABLED, false),
             carTelemetrySampleSeconds = prefs.getInt(KEY_CAR_SAMPLE_SECONDS, 10),
             carTelemetrySyncMinutes = prefs.getInt(KEY_CAR_SYNC_MINUTES, 30),
+            alertPollMinutes = prefs.getInt(KEY_ALERT_POLL_MINUTES, 60),
             carObdDeviceName = prefs.getString(KEY_CAR_OBD_NAME, "") ?: "",
             carObdDeviceAddress = prefs.getString(KEY_CAR_OBD_ADDRESS, "") ?: "",
             carMake = prefs.getString(KEY_CAR_MAKE, "") ?: "",
@@ -199,6 +205,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_CAR_TELEMETRY_ENABLED = "car_telemetry_enabled"
         private const val KEY_CAR_SAMPLE_SECONDS = "car_sample_seconds"
         private const val KEY_CAR_SYNC_MINUTES = "car_sync_minutes"
+        private const val KEY_ALERT_POLL_MINUTES = "alert_poll_minutes"
         private const val KEY_CAR_OBD_NAME = "car_obd_name"
         private const val KEY_CAR_OBD_ADDRESS = "car_obd_address"
         private const val KEY_CAR_MAKE = "car_make"
@@ -224,6 +231,7 @@ class SettingsRepository(context: Context) {
             KEY_CAR_TELEMETRY_ENABLED,
             KEY_CAR_SAMPLE_SECONDS,
             KEY_CAR_SYNC_MINUTES,
+            KEY_ALERT_POLL_MINUTES,
             KEY_CAR_OBD_NAME,
             KEY_CAR_OBD_ADDRESS,
             KEY_CAR_MAKE,
