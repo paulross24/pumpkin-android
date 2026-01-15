@@ -17,6 +17,14 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
             apiKey = "",
             openAiKey = "",
             profileName = "",
+            haBaseUrl = SettingsRepository.DEFAULT_HA_BASE_URL,
+            haClientId = SettingsRepository.DEFAULT_HA_CLIENT_ID,
+            haAccessToken = "",
+            haRefreshToken = "",
+            haTokenExpiry = 0L,
+            haUserName = "",
+            haUserId = "",
+            haAuthError = "",
             includeLocation = false,
             speakResponses = false,
             ttsVoiceName = "",
@@ -62,6 +70,24 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateProfileName(value: String) {
         viewModelScope.launch {
             repository.updateProfileName(value)
+        }
+    }
+
+    fun updateHaBaseUrl(value: String) {
+        viewModelScope.launch {
+            repository.updateHaBaseUrl(value)
+        }
+    }
+
+    fun updateHaClientId(value: String) {
+        viewModelScope.launch {
+            repository.updateHaClientId(value)
+        }
+    }
+
+    fun clearHaAuth() {
+        viewModelScope.launch {
+            repository.clearHaAuth()
         }
     }
 

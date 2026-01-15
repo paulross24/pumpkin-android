@@ -45,6 +45,77 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
+    fun updateHaBaseUrl(value: String) {
+        val normalized = normalizeServerUrl(value)
+        prefs.edit().putString(KEY_HA_BASE_URL, normalized).apply()
+        _settings.value = loadState()
+    }
+
+    fun updateHaClientId(value: String) {
+        prefs.edit().putString(KEY_HA_CLIENT_ID, value.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun setHaAuthPending(state: String, verifier: String) {
+        prefs.edit()
+            .putString(KEY_HA_AUTH_STATE, state)
+            .putString(KEY_HA_CODE_VERIFIER, verifier)
+            .apply()
+        _settings.value = loadState()
+    }
+
+    fun readHaAuthPending(): Pair<String, String>? {
+        val state = prefs.getString(KEY_HA_AUTH_STATE, null)
+        val verifier = prefs.getString(KEY_HA_CODE_VERIFIER, null)
+        return if (!state.isNullOrBlank() && !verifier.isNullOrBlank()) {
+            state to verifier
+        } else {
+            null
+        }
+    }
+
+    fun clearHaAuthPending() {
+        prefs.edit()
+            .remove(KEY_HA_AUTH_STATE)
+            .remove(KEY_HA_CODE_VERIFIER)
+            .apply()
+        _settings.value = loadState()
+    }
+
+    fun updateHaTokens(accessToken: String, refreshToken: String, expiresAt: Long) {
+        prefs.edit()
+            .putString(KEY_HA_ACCESS_TOKEN, accessToken.trim())
+            .putString(KEY_HA_REFRESH_TOKEN, refreshToken.trim())
+            .putLong(KEY_HA_TOKEN_EXPIRY, expiresAt)
+            .apply()
+        _settings.value = loadState()
+    }
+
+    fun updateHaUser(name: String, userId: String) {
+        prefs.edit()
+            .putString(KEY_HA_USER_NAME, name.trim())
+            .putString(KEY_HA_USER_ID, userId.trim())
+            .apply()
+        _settings.value = loadState()
+    }
+
+    fun updateHaAuthError(message: String) {
+        prefs.edit().putString(KEY_HA_AUTH_ERROR, message.trim()).apply()
+        _settings.value = loadState()
+    }
+
+    fun clearHaAuth() {
+        prefs.edit()
+            .remove(KEY_HA_ACCESS_TOKEN)
+            .remove(KEY_HA_REFRESH_TOKEN)
+            .remove(KEY_HA_TOKEN_EXPIRY)
+            .remove(KEY_HA_USER_NAME)
+            .remove(KEY_HA_USER_ID)
+            .remove(KEY_HA_AUTH_ERROR)
+            .apply()
+        _settings.value = loadState()
+    }
+
     fun updateIncludeLocation(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_INCLUDE_LOCATION, enabled).apply()
         _settings.value = loadState()
@@ -158,6 +229,16 @@ class SettingsRepository(context: Context) {
             apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
             openAiKey = prefs.getString(KEY_OPENAI_KEY, "") ?: "",
             profileName = prefs.getString(KEY_PROFILE_NAME, "") ?: "",
+            haBaseUrl = normalizeServerUrl(
+                prefs.getString(KEY_HA_BASE_URL, DEFAULT_HA_BASE_URL) ?: DEFAULT_HA_BASE_URL
+            ),
+            haClientId = prefs.getString(KEY_HA_CLIENT_ID, DEFAULT_HA_CLIENT_ID) ?: DEFAULT_HA_CLIENT_ID,
+            haAccessToken = prefs.getString(KEY_HA_ACCESS_TOKEN, "") ?: "",
+            haRefreshToken = prefs.getString(KEY_HA_REFRESH_TOKEN, "") ?: "",
+            haTokenExpiry = prefs.getLong(KEY_HA_TOKEN_EXPIRY, 0L),
+            haUserName = prefs.getString(KEY_HA_USER_NAME, "") ?: "",
+            haUserId = prefs.getString(KEY_HA_USER_ID, "") ?: "",
+            haAuthError = prefs.getString(KEY_HA_AUTH_ERROR, "") ?: "",
             includeLocation = prefs.getBoolean(KEY_INCLUDE_LOCATION, false),
             speakResponses = prefs.getBoolean(KEY_SPEAK_RESPONSES, false),
             ttsVoiceName = prefs.getString(KEY_TTS_VOICE, "") ?: "",
@@ -191,6 +272,16 @@ class SettingsRepository(context: Context) {
         private const val KEY_API_KEY = "api_key"
         private const val KEY_OPENAI_KEY = "openai_key"
         private const val KEY_PROFILE_NAME = "profile_name"
+        private const val KEY_HA_BASE_URL = "ha_base_url"
+        private const val KEY_HA_CLIENT_ID = "ha_client_id"
+        private const val KEY_HA_ACCESS_TOKEN = "ha_access_token"
+        private const val KEY_HA_REFRESH_TOKEN = "ha_refresh_token"
+        private const val KEY_HA_TOKEN_EXPIRY = "ha_token_expiry"
+        private const val KEY_HA_USER_NAME = "ha_user_name"
+        private const val KEY_HA_USER_ID = "ha_user_id"
+        private const val KEY_HA_AUTH_STATE = "ha_auth_state"
+        private const val KEY_HA_CODE_VERIFIER = "ha_code_verifier"
+        private const val KEY_HA_AUTH_ERROR = "ha_auth_error"
         private const val KEY_INCLUDE_LOCATION = "include_location"
         private const val KEY_SPEAK_RESPONSES = "speak_responses"
         private const val KEY_TTS_VOICE = "tts_voice"
@@ -217,6 +308,14 @@ class SettingsRepository(context: Context) {
             KEY_API_KEY,
             KEY_OPENAI_KEY,
             KEY_PROFILE_NAME,
+            KEY_HA_BASE_URL,
+            KEY_HA_CLIENT_ID,
+            KEY_HA_ACCESS_TOKEN,
+            KEY_HA_REFRESH_TOKEN,
+            KEY_HA_TOKEN_EXPIRY,
+            KEY_HA_USER_NAME,
+            KEY_HA_USER_ID,
+            KEY_HA_AUTH_ERROR,
             KEY_INCLUDE_LOCATION,
             KEY_SPEAK_RESPONSES,
             KEY_TTS_VOICE,
@@ -241,5 +340,7 @@ class SettingsRepository(context: Context) {
         )
 
         const val DEFAULT_SERVER_URL = "https://pumpkin.rosshome.co.uk"
+        const val DEFAULT_HA_BASE_URL = "https://ha.rosshome.co.uk"
+        const val DEFAULT_HA_CLIENT_ID = "https://pumpkin.rosshome.co.uk"
     }
 }

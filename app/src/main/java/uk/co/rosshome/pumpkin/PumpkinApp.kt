@@ -719,6 +719,8 @@ private fun SettingsScreen(
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
     var openAiKey by remember(settings.openAiKey) { mutableStateOf(settings.openAiKey) }
     var profileName by remember(settings.profileName) { mutableStateOf(settings.profileName) }
+    var haBaseUrl by remember(settings.haBaseUrl) { mutableStateOf(settings.haBaseUrl) }
+    var haClientId by remember(settings.haClientId) { mutableStateOf(settings.haClientId) }
     var quietHours by remember(settings.quietHours) { mutableStateOf(settings.quietHours) }
     var quietDays by remember(settings.quietHoursDays) { mutableStateOf(settings.quietHoursDays) }
     var notificationStyle by remember(settings.notificationStyle) { mutableStateOf(settings.notificationStyle) }
@@ -730,6 +732,7 @@ private fun SettingsScreen(
     var llmStatus by remember { mutableStateOf<String?>(null) }
     var mediaStatus by remember { mutableStateOf<String?>(null) }
     val mediaHelper = remember { MediaControlHelper(context.applicationContext) }
+    val haConnected = settings.haAccessToken.isNotBlank()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -762,6 +765,71 @@ private fun SettingsScreen(
             )
         }
         item { Button(onClick = { settingsViewModel.updateServerUrl(serverUrl) }) { Text(text = "Save server URL") } }
+        item {
+            Text(text = "Home Assistant Login", style = MaterialTheme.typography.titleMedium)
+        }
+        item {
+            OutlinedTextField(
+                value = haBaseUrl,
+                onValueChange = { haBaseUrl = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("HA Base URL") },
+                singleLine = true,
+            )
+        }
+        item { Button(onClick = { settingsViewModel.updateHaBaseUrl(haBaseUrl) }) { Text(text = "Save HA URL") } }
+        item {
+            OutlinedTextField(
+                value = haClientId,
+                onValueChange = { haClientId = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("HA Client ID") },
+                singleLine = true,
+            )
+        }
+        item { Button(onClick = { settingsViewModel.updateHaClientId(haClientId) }) { Text(text = "Save HA Client ID") } }
+        item {
+            if (haConnected) {
+                Text(
+                    text = if (settings.haUserName.isNotBlank()) {
+                        "Connected as ${settings.haUserName}"
+                    } else {
+                        "Connected to Home Assistant"
+                    },
+                )
+            } else {
+                Text(text = "Not connected to Home Assistant")
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = {
+                        settingsViewModel.updateHaBaseUrl(haBaseUrl)
+                        settingsViewModel.updateHaClientId(haClientId)
+                        val latest = settings.copy(haBaseUrl = haBaseUrl, haClientId = haClientId)
+                        HaAuthFlow.startLogin(context, latest, SettingsRepository(context))
+                    },
+                    enabled = haBaseUrl.isNotBlank() && haClientId.isNotBlank(),
+                ) {
+                    Text(text = "Connect HA")
+                }
+                Button(
+                    onClick = { settingsViewModel.clearHaAuth() },
+                    enabled = haConnected,
+                ) {
+                    Text(text = "Disconnect HA")
+                }
+            }
+        }
+        item {
+            if (settings.haAuthError.isNotBlank()) {
+                Text(text = "HA auth error: ${settings.haAuthError}", style = MaterialTheme.typography.bodySmall)
+            }
+        }
         item {
             OutlinedTextField(
                 value = profileName,

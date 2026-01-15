@@ -12,8 +12,8 @@ android {
         applicationId = "uk.co.rosshome.pumpkin"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.2.14"
+        versionCode = 15
+        versionName = "0.2.15"
     }
 
     buildTypes {
@@ -57,6 +57,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.browser:browser:1.8.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
