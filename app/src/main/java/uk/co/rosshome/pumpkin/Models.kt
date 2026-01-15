@@ -17,6 +17,8 @@ data class IngestRequest(
     val source: String,
     val device: String,
     val ts: String,
+    val ha_user_id: String? = null,
+    val ha_user_name: String? = null,
     val location: LocationPayload? = null,
 )
 
@@ -87,6 +89,8 @@ data class AskRequest(
     val source: String,
     val device: String,
     val ts: String,
+    val ha_user_id: String? = null,
+    val ha_user_name: String? = null,
     val location: LocationPayload? = null,
 )
 

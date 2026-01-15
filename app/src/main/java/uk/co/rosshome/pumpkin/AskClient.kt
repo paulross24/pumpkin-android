@@ -30,6 +30,8 @@ class AskClient(
             source = "android",
             device = deviceId,
             ts = Instant.now().toString(),
+            ha_user_id = settings.haUserId.ifBlank { null },
+            ha_user_name = settings.haUserName.ifBlank { null },
             location = location,
         )
         val body = json.encodeToString(payload)
