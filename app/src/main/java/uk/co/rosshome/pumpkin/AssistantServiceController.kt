@@ -21,7 +21,7 @@ object AssistantServiceController {
             val intent = Intent(context, AssistantService::class.java).apply {
                 action = AssistantService.ACTION_STOP
             }
-            context.startService(intent)
+            context.stopService(intent)
         }.onFailure { exc ->
             CrashReporter(context).reportNonFatal(exc)
         }
