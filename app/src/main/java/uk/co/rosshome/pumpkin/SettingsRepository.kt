@@ -301,7 +301,6 @@ class SettingsRepository(context: Context) {
         private val trackedKeys = setOf(
             KEY_SERVER_URL,
             KEY_API_KEY,
-            KEY_OPENAI_KEY,
             KEY_PROFILE_NAME,
             KEY_HA_BASE_URL,
             KEY_HA_CLIENT_ID,
