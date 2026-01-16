@@ -15,7 +15,6 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
         SettingsState(
             serverUrl = SettingsRepository.DEFAULT_SERVER_URL,
             apiKey = "",
-            openAiKey = "",
             profileName = "",
             haBaseUrl = SettingsRepository.DEFAULT_HA_BASE_URL,
             haClientId = SettingsRepository.DEFAULT_HA_CLIENT_ID,
@@ -58,12 +57,6 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
     fun updateApiKey(value: String) {
         viewModelScope.launch {
             repository.updateApiKey(value)
-        }
-    }
-
-    fun updateOpenAiKey(value: String) {
-        viewModelScope.launch {
-            repository.updateOpenAiKey(value)
         }
     }
 

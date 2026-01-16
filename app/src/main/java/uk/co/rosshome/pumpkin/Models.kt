@@ -298,7 +298,6 @@ data class IngestLogEntry(
 data class SettingsState(
     val serverUrl: String,
     val apiKey: String,
-    val openAiKey: String,
     val profileName: String,
     val haBaseUrl: String,
     val haClientId: String,

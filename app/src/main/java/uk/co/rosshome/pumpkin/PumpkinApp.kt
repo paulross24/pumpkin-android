@@ -242,12 +242,16 @@ private fun HomeScreen(
                 Text(text = settings.serverUrl)
                 Text(text = "API Key", style = MaterialTheme.typography.titleSmall)
                 Text(text = maskKey(settings.apiKey))
+                Text(text = "Profile", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = settings.profileName.ifBlank {
+                        settings.haUserName.ifBlank { "not set" }
+                    },
+                )
                 Text(text = "Location", style = MaterialTheme.typography.titleSmall)
                 Text(text = if (settings.includeLocation) "enabled" else "disabled")
                 Text(text = "Speak responses", style = MaterialTheme.typography.titleSmall)
                 Text(text = if (settings.speakResponses) "enabled" else "disabled")
-                Text(text = "OpenAI key", style = MaterialTheme.typography.titleSmall)
-                Text(text = if (settings.openAiKey.isBlank()) "not set" else "set")
             }
         }
         if (lastError != null) {
@@ -333,7 +337,13 @@ private fun PushToTalkScreen(
                     ?.firstOrNull()
                 if (!match.isNullOrBlank()) {
                     text = match
-                    speechStatus = "Ready"
+                    if (!ingestViewModel.isSending) {
+                        ingestViewModel.sendText(match)
+                        text = ""
+                        speechStatus = "Sent"
+                    } else {
+                        speechStatus = "Ready"
+                    }
                 } else {
                     speechStatus = "No speech detected"
                 }
@@ -717,8 +727,6 @@ private fun SettingsScreen(
 
     var serverUrl by remember(settings.serverUrl) { mutableStateOf(settings.serverUrl) }
     var apiKey by remember(settings.apiKey) { mutableStateOf(settings.apiKey) }
-    var openAiKey by remember(settings.openAiKey) { mutableStateOf(settings.openAiKey) }
-    var profileName by remember(settings.profileName) { mutableStateOf(settings.profileName) }
     var haBaseUrl by remember(settings.haBaseUrl) { mutableStateOf(settings.haBaseUrl) }
     var haClientId by remember(settings.haClientId) { mutableStateOf(settings.haClientId) }
     var quietHours by remember(settings.quietHours) { mutableStateOf(settings.quietHours) }
@@ -728,8 +736,6 @@ private fun SettingsScreen(
     var daysMenuOpen by remember { mutableStateOf(false) }
     var styleMenuOpen by remember { mutableStateOf(false) }
     val voiceOptions = ingestViewModel.availableVoices
-    val scope = rememberCoroutineScope()
-    var llmStatus by remember { mutableStateOf<String?>(null) }
     var mediaStatus by remember { mutableStateOf<String?>(null) }
     val mediaHelper = remember { MediaControlHelper(context.applicationContext) }
     val haConnected = settings.haAccessToken.isNotBlank()
@@ -832,16 +838,6 @@ private fun SettingsScreen(
         }
         item {
             OutlinedTextField(
-                value = profileName,
-                onValueChange = { profileName = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Profile name") },
-                singleLine = true,
-            )
-        }
-        item { Button(onClick = { settingsViewModel.updateProfileName(profileName) }) { Text(text = "Save profile name") } }
-        item {
-            OutlinedTextField(
                 value = apiKey,
                 onValueChange = { apiKey = it },
                 modifier = Modifier.fillMaxWidth(),
@@ -851,39 +847,6 @@ private fun SettingsScreen(
             )
         }
         item { Button(onClick = { settingsViewModel.updateApiKey(apiKey) }) { Text(text = "Save API key") } }
-        item {
-            OutlinedTextField(
-                value = openAiKey,
-                onValueChange = { openAiKey = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("OpenAI API Key") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-            )
-        }
-        item {
-            Button(
-                onClick = {
-                    settingsViewModel.updateOpenAiKey(openAiKey)
-                    scope.launch {
-                        val status = withContext(Dispatchers.IO) {
-                            LlmConfigClient().pushConfig(settings)
-                        }.fold(
-                            onSuccess = { "sent to server" },
-                            onFailure = { "failed to send" },
-                        )
-                        llmStatus = status
-                    }
-                },
-            ) {
-                Text(text = "Save OpenAI key")
-            }
-        }
-        item {
-            if (!llmStatus.isNullOrBlank()) {
-                Text(text = "LLM config: $llmStatus", style = MaterialTheme.typography.bodySmall)
-            }
-        }
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),

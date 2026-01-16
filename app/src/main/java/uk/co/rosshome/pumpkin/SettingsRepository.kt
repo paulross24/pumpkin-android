@@ -35,11 +35,6 @@ class SettingsRepository(context: Context) {
         _settings.value = loadState()
     }
 
-    fun updateOpenAiKey(value: String) {
-        prefs.edit().putString(KEY_OPENAI_KEY, value.trim()).apply()
-        _settings.value = loadState()
-    }
-
     fun updateProfileName(value: String) {
         prefs.edit().putString(KEY_PROFILE_NAME, value.trim()).apply()
         _settings.value = loadState()
@@ -229,7 +224,6 @@ class SettingsRepository(context: Context) {
                 prefs.getString(KEY_SERVER_URL, DEFAULT_SERVER_URL) ?: DEFAULT_SERVER_URL
             ),
             apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
-            openAiKey = prefs.getString(KEY_OPENAI_KEY, "") ?: "",
             profileName = prefs.getString(KEY_PROFILE_NAME, "") ?: "",
             haBaseUrl = normalizeServerUrl(
                 prefs.getString(KEY_HA_BASE_URL, DEFAULT_HA_BASE_URL) ?: DEFAULT_HA_BASE_URL
@@ -272,7 +266,6 @@ class SettingsRepository(context: Context) {
     companion object {
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_API_KEY = "api_key"
-        private const val KEY_OPENAI_KEY = "openai_key"
         private const val KEY_PROFILE_NAME = "profile_name"
         private const val KEY_HA_BASE_URL = "ha_base_url"
         private const val KEY_HA_CLIENT_ID = "ha_client_id"
