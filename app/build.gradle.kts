@@ -12,8 +12,8 @@ android {
         applicationId = "uk.co.rosshome.pumpkin"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "0.3.0"
+        versionCode = 20
+        versionName = "0.3.2"
     }
 
     buildTypes {
