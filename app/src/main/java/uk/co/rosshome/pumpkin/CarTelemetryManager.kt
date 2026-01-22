@@ -222,7 +222,7 @@ class CarTelemetryManager(
     }
 }
 
-private data class CarTelemetrySample(
+data class CarTelemetrySample(
     val readings: Map<String, Double>,
     val dtcsActive: List<String>,
     val dtcsPending: List<String>,
