@@ -79,8 +79,8 @@ class CarTelemetryManager(
                 delay(15_000)
                 continue
             }
-            val readings = active.readTelemetry()
-            if (readings.isNotEmpty()) {
+            val sample = active.readTelemetrySample()
+            if (sample.readings.isNotEmpty() || sample.dtcsActive.isNotEmpty() || sample.dtcsPending.isNotEmpty()) {
                 val location = if (settings.includeLocation && hasLocationPermission()) {
                     val last = locationProvider.lastKnownLocation()
                     if (last != null) {
@@ -106,7 +106,10 @@ class CarTelemetryManager(
                     year = settings.carYear.ifBlank { null },
                     trim = settings.carTrim.ifBlank { null },
                     location = location,
-                    readings = readings,
+                    readings = sample.readings,
+                    dtcs_active = sample.dtcsActive,
+                    dtcs_pending = sample.dtcsPending,
+                    readiness = sample.readiness,
                 )
                 store.append(record)
             }
@@ -219,6 +222,13 @@ class CarTelemetryManager(
     }
 }
 
+private data class CarTelemetrySample(
+    val readings: Map<String, Double>,
+    val dtcsActive: List<String>,
+    val dtcsPending: List<String>,
+    val readiness: CarReadiness?,
+)
+
 class CarTelemetryStore(context: Context) {
     private val file = File(context.filesDir, "car_telemetry.jsonl")
     private val json = Json { encodeDefaults = true }
@@ -280,7 +290,7 @@ class ObdConnection(private val device: BluetoothDevice) {
         return response.isNotBlank() && !response.contains("NO DATA", ignoreCase = true)
     }
 
-    fun readTelemetry(): Map<String, Double> {
+    fun readTelemetrySample(): CarTelemetrySample {
         val readings = mutableMapOf<String, Double>()
         for (pid in PIDS) {
             val response = sendCommand(pid.command)
@@ -289,7 +299,15 @@ class ObdConnection(private val device: BluetoothDevice) {
                 readings[pid.key] = parsed
             }
         }
-        return readings
+        val readiness = readReadiness()
+        val dtcsActive = readDtcs("03")
+        val dtcsPending = readDtcs("07")
+        return CarTelemetrySample(
+            readings = readings,
+            dtcsActive = dtcsActive,
+            dtcsPending = dtcsPending,
+            readiness = readiness,
+        )
     }
 
     fun close() {
@@ -327,6 +345,68 @@ class ObdConnection(private val device: BluetoothDevice) {
         return buffer.toString()
     }
 
+    private fun readReadiness(): CarReadiness? {
+        val response = sendCommand("0101")
+        val data = parsePidBytes(response, "0101")
+        if (data.isEmpty()) return null
+        val first = data.getOrNull(0) ?: return null
+        val milOn = (first and 0x80) != 0
+        val dtcCount = first and 0x7F
+        val raw = data.take(4).joinToString(" ") { "%02X".format(it) }
+        return CarReadiness(mil_on = milOn, dtc_count = dtcCount, raw = raw)
+    }
+
+    private fun readDtcs(mode: String): List<String> {
+        val response = sendCommand(mode)
+        if (response.contains("NO DATA", ignoreCase = true)) return emptyList()
+        val cleaned = response.uppercase()
+            .replace("SEARCHING...", "")
+            .replace("NO DATA", "")
+            .replace(Regex("[^0-9A-F]"), "")
+        val marker = if (mode == "03") "43" else "47"
+        val idx = cleaned.indexOf(marker)
+        if (idx == -1) return emptyList()
+        val payload = cleaned.substring(idx + marker.length)
+        if (payload.length < 4) return emptyList()
+        val bytes = payload.chunked(2).mapNotNull { it.toIntOrNull(16) }
+        val dtcs = mutableListOf<String>()
+        for (i in bytes.indices step 2) {
+            val a = bytes.getOrNull(i) ?: break
+            val b = bytes.getOrNull(i + 1) ?: break
+            if (a == 0 && b == 0) continue
+            val type = when ((a and 0xC0) shr 6) {
+                0 -> "P"
+                1 -> "C"
+                2 -> "B"
+                else -> "U"
+            }
+            val digit1 = (a and 0x30) shr 4
+            val digit2 = a and 0x0F
+            val digit3 = (b and 0xF0) shr 4
+            val digit4 = b and 0x0F
+            val code = "$type$digit1${digit2.toString(16).uppercase()}${digit3.toString(16).uppercase()}${digit4.toString(16).uppercase()}"
+            dtcs.add(code)
+        }
+        return dtcs
+    }
+
+    private fun parsePidBytes(raw: String, command: String): List<Int> {
+        if (raw.contains("NO DATA", ignoreCase = true)) return emptyList()
+        val cleaned = raw.uppercase()
+            .replace("SEARCHING...", "")
+            .replace("NO DATA", "")
+            .replace(Regex("[^0-9A-F]"), "")
+        val pid = command.removePrefix("01").removePrefix("0").padStart(2, '0')
+        val marker = "41" + pid
+        val idx = cleaned.indexOf(marker)
+        if (idx == -1) return emptyList()
+        val payload = cleaned.substring(idx + marker.length)
+        if (payload.length < 2) return emptyList()
+        return payload.chunked(2).mapNotNull {
+            runCatching { it.toInt(16) }.getOrNull()
+        }
+    }
+
     companion object {
         private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
         private const val RESPONSE_TIMEOUT_MS = 2000L
@@ -358,7 +438,45 @@ class ObdConnection(private val device: BluetoothDevice) {
                 val b = bytes.getOrNull(1) ?: return@ObdPid null
                 ((a * 256) + b) / 20.0
             },
+            ObdPid("0106", "stft_b1_pct") { bytes -> bytes.getOrNull(0)?.let { (it - 128) * 100.0 / 128.0 } },
+            ObdPid("0107", "ltft_b1_pct") { bytes -> bytes.getOrNull(0)?.let { (it - 128) * 100.0 / 128.0 } },
+            ObdPid("0108", "stft_b2_pct") { bytes -> bytes.getOrNull(0)?.let { (it - 128) * 100.0 / 128.0 } },
+            ObdPid("0109", "ltft_b2_pct") { bytes -> bytes.getOrNull(0)?.let { (it - 128) * 100.0 / 128.0 } },
+            ObdPid("010A", "fuel_pressure_kpa") { bytes -> bytes.getOrNull(0)?.times(3.0) },
+            ObdPid("010B", "map_kpa") { bytes -> bytes.getOrNull(0)?.toDouble() },
+            ObdPid("010E", "timing_advance_deg") { bytes -> bytes.getOrNull(0)?.let { it / 2.0 - 64.0 } },
+            ObdPid("0131", "distance_since_codes_km") { bytes ->
+                val a = bytes.getOrNull(0) ?: return@ObdPid null
+                val b = bytes.getOrNull(1) ?: return@ObdPid null
+                ((a * 256) + b).toDouble()
+            },
+            ObdPid("0114", "o2_b1s1_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("0114", "o2_b1s1_trim_pct") { bytes -> parseO2Trim(bytes) },
+            ObdPid("0115", "o2_b1s2_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("0115", "o2_b1s2_trim_pct") { bytes -> parseO2Trim(bytes) },
+            ObdPid("0116", "o2_b1s3_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("0116", "o2_b1s3_trim_pct") { bytes -> parseO2Trim(bytes) },
+            ObdPid("0117", "o2_b1s4_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("0117", "o2_b1s4_trim_pct") { bytes -> parseO2Trim(bytes) },
+            ObdPid("0118", "o2_b2s1_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("0118", "o2_b2s1_trim_pct") { bytes -> parseO2Trim(bytes) },
+            ObdPid("0119", "o2_b2s2_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("0119", "o2_b2s2_trim_pct") { bytes -> parseO2Trim(bytes) },
+            ObdPid("011A", "o2_b2s3_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("011A", "o2_b2s3_trim_pct") { bytes -> parseO2Trim(bytes) },
+            ObdPid("011B", "o2_b2s4_v") { bytes -> parseO2Voltage(bytes) },
+            ObdPid("011B", "o2_b2s4_trim_pct") { bytes -> parseO2Trim(bytes) },
         )
+
+        private fun parseO2Voltage(bytes: List<Int>): Double? {
+            val a = bytes.getOrNull(0) ?: return null
+            return a / 200.0
+        }
+
+        private fun parseO2Trim(bytes: List<Int>): Double? {
+            val b = bytes.getOrNull(1) ?: return null
+            return (b - 128) * 100.0 / 128.0
+        }
     }
 }
 

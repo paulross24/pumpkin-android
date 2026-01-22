@@ -343,4 +343,14 @@ data class CarTelemetryRecord(
     val trim: String? = null,
     val location: LocationPayload? = null,
     val readings: Map<String, Double> = emptyMap(),
+    val dtcs_active: List<String> = emptyList(),
+    val dtcs_pending: List<String> = emptyList(),
+    val readiness: CarReadiness? = null,
+)
+
+@Serializable
+data class CarReadiness(
+    val mil_on: Boolean? = null,
+    val dtc_count: Int? = null,
+    val raw: String? = null,
 )
