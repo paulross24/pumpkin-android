@@ -1,6 +1,7 @@
 package uk.co.rosshome.pumpkin
 
 import java.time.Instant
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -25,7 +26,9 @@ class IngestClient(
         location: LocationPayload?,
         source: String = "android",
     ): IngestLogEntry {
+        val requestId = UUID.randomUUID().toString()
         val payload = IngestRequest(
+            request_id = requestId,
             text = text,
             source = source,
             device = deviceId,
@@ -50,9 +53,9 @@ class IngestClient(
                 httpClient.newCall(request).execute().use { response ->
                     val responseBody = response.body?.string()
                     val message = if (response.isSuccessful) {
-                        "${response.code} ${response.message}"
+                        "${response.code} ${response.message} (${requestId})"
                     } else {
-                        "${response.code} ${response.message}"
+                        "${response.code} ${response.message} (${requestId})"
                     }
                     IngestLogEntry(
                         timestamp = Instant.now().toString(),

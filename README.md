@@ -17,8 +17,17 @@ This repo is set up to develop an Android app for Pumpkin using GitHub Codespace
 
 ## App overview
 - Single-activity Jetpack Compose app with MVVM
-- Sends POST /ingest to the configured Pumpkin server
+- Sends POST /ingest (v1 schema) to the configured Pumpkin server
 - Optional foreground location inclusion (last known location only)
+
+## Ingest v1 contract
+The app sends:
+- `schema_version: 1`
+- `request_id: <uuid>`
+- `text`, `source`, `device`, `ts`
+- optional `location`
+
+If the server has `PUMPKIN_INGEST_KEY` set, the app sends `X-Pumpkin-Key`.
 
 ## Screens
 - Home: current server + key summary

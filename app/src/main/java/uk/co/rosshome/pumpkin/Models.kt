@@ -8,11 +8,13 @@ import kotlinx.serialization.json.JsonElement
 data class LocationPayload(
     val lat: Double,
     val lon: Double,
-    @SerialName("acc") val accuracy: Double? = null,
+    @SerialName("accuracy_m") val accuracy: Double? = null,
 )
 
 @Serializable
 data class IngestRequest(
+    val schema_version: Int = 1,
+    val request_id: String,
     val text: String,
     val source: String,
     val device: String,
@@ -24,8 +26,10 @@ data class IngestRequest(
 
 @Serializable
 data class IngestResponse(
-    val status: String? = null,
-    val received: Map<String, String>? = null,
+    val accepted: Boolean? = null,
+    val request_id: String? = null,
+    val received_at: String? = null,
+    val correlation_ids: Map<String, Int>? = null,
 )
 
 @Serializable
